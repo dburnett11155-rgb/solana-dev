@@ -63,11 +63,10 @@ export default function Home() {
   const [liveChange, setLiveChange] = useState<number|null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // Load or create current round from Supabase
   const loadRound = useCallback(async () => {
     const hour = getCurrentHour();
     const date = getTodayStr();
-    let { data, error } = await supabase
+    let { data } = await supabase
       .from('rounds')
       .select('*')
       .eq('hour', hour)
@@ -89,7 +88,6 @@ export default function Home() {
       setRolloverAmount(data.rollover_amount || 0);
       if (data.start_price) setRoundStartPrice(data.start_price);
     }
-    // Load bets for this round
     if (data?.id) {
       const { data: bets } = await supabase
         .from('bets')
@@ -110,7 +108,6 @@ export default function Home() {
         setLiveFeed(feed);
       }
     }
-    // Load streak for connected wallet
     if (publicKey) {
       const { data: streakData } = await supabase
         .from('streaks')
@@ -123,14 +120,12 @@ export default function Home() {
 
   useEffect(() => { loadRound(); }, []);
 
-  // Settle round at top of hour
   const settleRound = useCallback(async () => {
     if (!roundId || !roundStartPrice || !price) return;
     const pctChange = ((price - roundStartPrice) / roundStartPrice) * 100;
     const winningTier = TIERS.find(t => t.check(pctChange));
     if (!winningTier) return;
 
-    // Get all bets for this round
     const { data: bets } = await supabase
       .from('bets')
       .select('*')
@@ -141,17 +136,13 @@ export default function Home() {
     const winningBets = bets.filter((b:any) => b.tier === winningTier.value);
     const totalWinningAmount = winningBets.reduce((sum:number, b:any) => sum + b.amount, 0);
     const payoutPool = pot * 0.80;
+    const isRolloverRound = winningBets.length === 0;
 
-    // Build payout list
     const payouts: {wallet:string, amount:number}[] = winningBets.map((b:any) => ({
       wallet: b.wallet,
       amount: parseFloat(((b.amount / totalWinningAmount) * payoutPool).toFixed(6))
     }));
 
-    // Check rollover
-    const isRolloverRound = winningBets.length === 0;
-
-    // Send email with payout instructions
     if (payouts.length > 0) {
       const payoutText = payouts.map(p => `${p.wallet}: ${p.amount} SOL`).join('\n');
       await fetch('/api/notify', {
@@ -165,7 +156,6 @@ export default function Home() {
       });
     }
 
-    // Update round as settled
     await supabase.from('rounds').update({
       end_price: price,
       winning_tier: winningTier.value,
@@ -173,18 +163,12 @@ export default function Home() {
       is_rollover: isRolloverRound
     }).eq('id', roundId);
 
-    // Update streaks
     for (const bet of bets) {
       const won = bet.tier === winningTier.value;
       const { data: existingStreak } = await supabase
-        .from('streaks')
-        .select('*')
-        .eq('wallet', bet.wallet)
-        .single();
-
+        .from('streaks').select('*').eq('wallet', bet.wallet).single();
       const newStreak = won ? (existingStreak?.current_streak || 0) + 1 : 0;
       const jackpotHit = newStreak >= JACKPOT_STREAK;
-
       if (existingStreak) {
         await supabase.from('streaks').update({
           current_streak: jackpotHit ? 0 : newStreak,
@@ -200,10 +184,8 @@ export default function Home() {
           jackpot_claimed: jackpotHit
         });
       }
-
       if (jackpotHit && bet.wallet === publicKey?.toString()) {
         setJackpotWon(true);
-        // Email jackpot winner info
         await fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -218,7 +200,6 @@ export default function Home() {
 
     setLastResult({ winningTier: winningTier.label, pctChange });
 
-    // Create new round
     const newHour = getCurrentHour();
     const newPot = isRolloverRound ? pot : 0;
     const { data: newRound } = await supabase.from('rounds').insert({
@@ -244,23 +225,18 @@ export default function Home() {
     }
   }, [roundId, roundStartPrice, price, pot, jackpot, publicKey]);
 
-  // Check for hour change every 30 seconds
   useEffect(() => {
     const i = setInterval(async () => {
       const hour = getCurrentHour();
       const date = getTodayStr();
       const { data } = await supabase
-        .from('rounds')
-        .select('id,hour,date,settled')
-        .eq('hour', hour)
-        .eq('date', date)
-        .single();
+        .from('rounds').select('id,hour,date,settled')
+        .eq('hour', hour).eq('date', date).single();
       if (!data) await settleRound();
     }, 30000);
     return () => clearInterval(i);
   }, [settleRound]);
 
-  // Fetch live price
   useEffect(() => {
     async function fetchPrice() {
       try {
@@ -280,7 +256,6 @@ export default function Home() {
     return () => clearInterval(i);
   }, [price, roundStartPrice]);
 
-  // Fetch price history for chart
   useEffect(() => {
     async function fetchHistory() {
       try {
@@ -293,7 +268,6 @@ export default function Home() {
     fetchHistory();
   }, []);
 
-  // Countdown
   useEffect(() => {
     function update() {
       const now = new Date();
@@ -310,22 +284,24 @@ export default function Home() {
     return () => clearInterval(i);
   }, []);
 
-  // Slow fake bets
+  // Fake bets — pot increases by exactly 80% of bet amount (same as real bets)
   useEffect(() => {
     function addFakeBet() {
       const tierKeys = ["bigpump","smallpump","stagnate","smalldump","bigdump"];
       const rc = tierKeys[Math.floor(Math.random()*tierKeys.length)] as keyof typeof tierCounts;
       const amounts = ["0.1","0.1","0.2","0.25","0.5"];
       const ra = amounts[Math.floor(Math.random()*amounts.length)];
+      const betAmt = parseFloat(ra);
+      const potIncrease = parseFloat((betAmt * 0.80).toFixed(4));
       setLiveFeed(prev => [{wallet:randomWallet(),choice:rc,amount:ra},...prev.slice(0,8)]);
       setTierCounts(prev => ({...prev,[rc]:prev[rc]+1}));
+      setPot(prev => parseFloat((prev + potIncrease).toFixed(4)));
       setTimeout(addFakeBet, 45000+Math.random()*30000);
     }
     const t = setTimeout(addFakeBet, 60000);
     return () => clearTimeout(t);
   }, []);
 
-  // Draw chart
   useEffect(() => {
     if (!chartRef.current || priceHistory.length < 2) return;
     const canvas = document.createElement("canvas");
@@ -340,7 +316,6 @@ export default function Home() {
     const max = Math.max(...values)*1.0005;
     const w = canvas.width;
     const h = canvas.height;
-    // Grid lines
     ctx.strokeStyle = "rgba(139,92,246,0.1)";
     ctx.lineWidth = 1;
     for (let i=0;i<4;i++) {
@@ -350,7 +325,6 @@ export default function Home() {
       ctx.lineTo(w,y);
       ctx.stroke();
     }
-    // Price line
     const grad = ctx.createLinearGradient(0,0,0,h);
     grad.addColorStop(0,"rgba(139,92,246,0.4)");
     grad.addColorStop(1,"rgba(139,92,246,0)");
@@ -363,7 +337,6 @@ export default function Home() {
     ctx.strokeStyle = "#a855f7";
     ctx.lineWidth = 2.5;
     ctx.stroke();
-    // Fill
     const lastX = w;
     const lastY = h-((priceHistory[priceHistory.length-1].value-min)/(max-min))*h*0.85-h*0.05;
     ctx.lineTo(lastX,h);
@@ -371,7 +344,6 @@ export default function Home() {
     ctx.closePath();
     ctx.fillStyle = grad;
     ctx.fill();
-    // Price labels
     ctx.fillStyle = "rgba(139,92,246,0.6)";
     ctx.font = "10px monospace";
     ctx.fillText(`$${max.toFixed(2)}`,4,12);
@@ -392,18 +364,17 @@ export default function Home() {
           lamports,
         })
       );
-      const {blockhash} = await connection.getLatestBlockhash();
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
       const sig = await sendTransaction(transaction, connection);
-      await connection.confirmTransaction(sig,"confirmed");
+      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
       setTxSig(sig);
 
-      // Record bet in Supabase
-      const jackpotCut = isRollover ? a*0.01 : a*0.01;
-      const potCut = a*0.80;
-      const newPot = parseFloat((pot+potCut).toFixed(4));
-      const newJackpot = parseFloat((jackpot+jackpotCut).toFixed(4));
+      const potCut = parseFloat((a * 0.80).toFixed(4));
+      const jackpotCut = parseFloat((a * 0.01).toFixed(4));
+      const newPot = parseFloat((pot + potCut).toFixed(4));
+      const newJackpot = parseFloat((jackpot + jackpotCut).toFixed(4));
 
       await supabase.from('bets').insert({
         round_id: roundId,
@@ -444,7 +415,6 @@ export default function Home() {
     <main className="min-h-screen text-white p-3" style={{background:"linear-gradient(135deg,#0a0010 0%,#0d0020 50%,#050010 100%)"}}>
       <div className="max-w-lg mx-auto">
 
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-2xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent">
@@ -457,7 +427,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Last result */}
         {lastResult && (
           <div className="rounded-xl p-3 mb-3 border border-purple-800 text-center" style={{background:"linear-gradient(135deg,#0d0020,#0a0018)"}}>
             <p className="text-purple-400 text-xs font-bold">LAST ROUND</p>
@@ -467,7 +436,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* How it works */}
         <div className="rounded-2xl p-4 mb-3 border border-purple-900" style={{background:"linear-gradient(135deg,#0d0020,#0a0018)"}}>
           <p className="text-purple-300 font-bold text-sm mb-2">⚡ How it works</p>
           <p className="text-gray-400 text-xs leading-relaxed mb-3">
@@ -489,7 +457,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Jackpot */}
         <div className="rounded-2xl p-4 mb-3 border border-yellow-800 text-center" style={{background:"linear-gradient(135deg,#1a1000,#201500)"}}>
           <p className="text-yellow-300 font-black text-base">⚡ JACKPOT</p>
           <p className="text-yellow-400 font-black text-4xl my-1">{jackpot.toFixed(3)} SOL</p>
@@ -505,7 +472,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Rollover */}
         {isRollover && (
           <div className="bg-gradient-to-r from-yellow-900/60 to-orange-900/60 border border-yellow-500 rounded-2xl p-4 mb-3 text-center">
             <p className="text-yellow-300 font-black text-xl">🔥 ROLLOVER ROUND!</p>
@@ -514,7 +480,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Jackpot won */}
         {jackpotWon && (
           <div className="bg-yellow-900/60 border-2 border-yellow-400 rounded-2xl p-6 mb-3 text-center">
             <p className="text-yellow-300 font-black text-3xl">🏆 JACKPOT!</p>
@@ -523,7 +488,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Price + Timer + Chart */}
         <div className="rounded-2xl p-4 mb-3 border border-purple-800" style={{background:"linear-gradient(135deg,#1a0030,#0d0025)"}}>
           <div className="flex justify-between items-center mb-2">
             <div>
@@ -549,14 +513,12 @@ export default function Home() {
           <div ref={chartRef} className="w-full rounded-xl overflow-hidden" style={{height:"140px",background:"#0d0020"}} />
         </div>
 
-        {/* Pot */}
         <div className="rounded-2xl p-4 border border-green-800 text-center mb-3" style={{background:"linear-gradient(135deg,#001500,#002000)"}}>
           <p className="text-green-400 text-xs font-bold">💰 THIS ROUND POT</p>
           <p className="text-green-300 font-black text-4xl">{totalPot.toFixed(3)} SOL</p>
           <p className="text-green-700 text-xs">Split proportionally among winners · resets each hour</p>
         </div>
 
-        {/* Confirm */}
         {showConfirm&&txSig&&(
           <div className="bg-green-900/40 border border-green-500 rounded-2xl p-4 mb-3 text-center">
             <p className="text-green-400 font-black text-xl">✅ BET CONFIRMED!</p>
@@ -573,7 +535,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Betting */}
         <div className="rounded-2xl p-4 border border-purple-800 mb-3" style={{background:"linear-gradient(135deg,#0d0020,#120025)"}}>
           <p className="text-center text-purple-300 font-bold mb-3">Where is SOL going this hour?</p>
           <div className="space-y-2 mb-4">
@@ -650,7 +611,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Live feed */}
         {liveFeed.length>0&&(
           <div className="rounded-2xl p-4 border border-purple-900 mb-3" style={{background:"linear-gradient(135deg,#0d0020,#0a0018)"}}>
             <p className="text-purple-400 text-sm font-bold mb-3">⚡ LIVE BETS</p>
@@ -669,7 +629,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Disclaimer */}
         <p className="text-center text-purple-900 text-xs mt-2 mb-6 px-4 leading-relaxed">
           Platform fee applies. Degen Echo is a skill-based prediction game. Participation involves financial risk and is intended for entertainment purposes only. By participating, you confirm you are of legal age in your jurisdiction, that participation is not prohibited by applicable law, and that you accept full responsibility for any losses incurred. Degen Echo makes no guarantees of profit. Past results do not predict future outcomes. Payouts are processed within 1 hour of round close. The jackpot accumulates continuously and is awarded to the first player to achieve a verified 10-round win streak. All transactions are final. Degen Echo reserves the right to modify game parameters at any time.
         </p>
