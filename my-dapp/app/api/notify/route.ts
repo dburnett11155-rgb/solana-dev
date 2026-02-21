@@ -4,17 +4,17 @@ export async function POST(req: NextRequest) {
   const { to, subject, body } = await req.json()
   
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+        'api-key': process.env.BREVO_API_KEY || ''
       },
       body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to,
+        sender: { name: 'Degen Echo', email: 'Dburnett11155@gmail.com' },
+        to: [{ email: to }],
         subject,
-        text: body
+        textContent: body
       })
     })
     return NextResponse.json({ ok: true })
