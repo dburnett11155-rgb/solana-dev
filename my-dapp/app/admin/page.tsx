@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const TIERS: Record<string, string> = {
   bigpump: "🚀 Big Pump",
@@ -12,171 +17,216 @@ const TIERS: Record<string, string> = {
 };
 
 export default function AdminPage() {
+  const [authed, setAuthed] = useState(false);
+  const [password, setPassword] = useState("");
   const [rounds, setRounds] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any>(null);
   const [bets, setBets] = useState<any[]>([]);
-  const [selectedRound, setSelectedRound] = useState<any>(null);
   const [payouts, setPayouts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    setLoading(true);
-    const { data: roundData } = await supabase
-      .from("rounds")
-      .select("*")
-      .order("id", { ascending: false })
-      .limit(20);
-    setRounds(roundData || []);
-    setLoading(false);
-  }
-
-  async function loadRoundBets(round: any) {
-    setSelectedRound(round);
-    const { data: betData } = await supabase
-      .from("bets")
-      .select("*")
-      .eq("round_id", round.id)
-      .order("amount", { ascending: false });
-    setBets(betData || []);
-
-    if (round.winning_tier && betData) {
-      const winners = betData.filter((b: any) => b.tier === round.winning_tier);
-      const totalWinning = winners.reduce((sum: number, b: any) => sum + b.amount, 0);
-      const payoutPool = (round.pot || 0) * 0.80;
-      const calculated = winners.map((b: any) => ({
-        wallet: b.wallet,
-        bet: b.amount,
-        payout: totalWinning > 0 ? parseFloat(((b.amount / totalWinning) * payoutPool).toFixed(6)) : 0,
-        tier: b.tier,
-      }));
-      setPayouts(calculated);
+  function handleLogin() {
+    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "degen_admin_2026") {
+      setAuthed(true);
     } else {
-      setPayouts([]);
+      alert("Wrong password");
     }
   }
 
-  const totalPot = selectedRound ? (selectedRound.pot || 0) : 0;
-  const rake = parseFloat((totalPot * 0.19).toFixed(4));
-  const jackpotCut = parseFloat((totalPot * 0.01).toFixed(4));
-  const winnerPool = parseFloat((totalPot * 0.80).toFixed(4));
+  useEffect(() => {
+    if (!authed) return;
+    async function loadRounds() {
+      const { data } = await supabase
+        .from("rounds")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(48);
+      setRounds(data || []);
+    }
+    loadRounds();
+  }, [authed]);
+
+  async function loadRoundDetail(round: any) {
+    setLoading(true);
+    setSelected(round);
+    const { data: allBets } = await supabase
+      .from("bets")
+      .select("*")
+      .eq("round_id", round.id);
+    setBets(allBets || []);
+
+    if (round.settled && round.winning_tier && allBets) {
+      const winningBets = allBets.filter((b: any) => b.tier === round.winning_tier);
+      const totalWinning = winningBets.reduce((sum: number, b: any) => sum + b.amount, 0);
+      const payoutPool = (round.pot || 0) * 0.80;
+      const computed = winningBets.map((b: any) => ({
+        wallet: b.wallet,
+        bet: b.amount,
+        payout: totalWinning > 0
+          ? parseFloat(((b.amount / totalWinning) * payoutPool).toFixed(6))
+          : 0,
+        tx: b.tx_sig,
+      }));
+      setPayouts(computed);
+    } else {
+      setPayouts([]);
+    }
+    setLoading(false);
+  }
+
+  if (!authed) {
+    return (
+      <main className="min-h-screen flex items-center justify-center" style={{ background: "#0a0010" }}>
+        <div className="bg-purple-900/30 border border-purple-700 rounded-2xl p-8 w-80 text-center">
+          <h1 className="text-white font-black text-2xl mb-2">🔐 Admin</h1>
+          <p className="text-purple-400 text-sm mb-4">Degen Echo Settlement Panel</p>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleLogin()}
+            className="w-full bg-black border border-purple-800 rounded-xl px-4 py-3 text-white outline-none mb-3 text-center"
+          />
+          <button
+            onClick={handleLogin}
+            className="w-full py-3 rounded-xl font-black bg-purple-600 hover:bg-purple-500 text-white"
+          >
+            Enter
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen text-white p-4" style={{ background: "linear-gradient(135deg,#0a0010,#0d0020)" }}>
-      <div className="max-w-2xl mx-auto">
+    <main className="min-h-screen text-white p-4" style={{ background: "#0a0010" }}>
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-black text-purple-400 mb-1">🎰 Degen Echo Admin</h1>
+        <p className="text-purple-600 text-sm mb-6">Settlement & Payout Panel</p>
 
-        <h1 className="text-2xl font-black text-purple-400 mb-1">🎰 Degen Echo Admin</h1>
-        <p className="text-purple-700 text-xs mb-6">Payout calculator — keep this page private</p>
-
-        {loading && <p className="text-purple-400">Loading...</p>}
-
-        {/* Round list */}
-        <div className="rounded-2xl border border-purple-900 mb-4 overflow-hidden">
-          <div className="p-3 border-b border-purple-900 bg-purple-900/20">
-            <p className="text-purple-300 font-bold text-sm">Recent Rounds</p>
-          </div>
-          {rounds.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => loadRoundBets(r)}
-              className={`w-full flex justify-between items-center px-4 py-3 border-b border-purple-900/50 text-left hover:bg-purple-900/20 transition-all ${selectedRound?.id === r.id ? "bg-purple-900/40" : ""}`}
-            >
-              <div>
-                <span className="text-white font-bold text-sm">Round #{r.id}</span>
-                <span className="text-purple-500 text-xs ml-2">{r.date} {r.hour}:00</span>
-              </div>
-              <div className="text-right">
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${r.settled ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
-                  {r.settled ? "Settled" : "Active"}
-                </span>
-                {r.winning_tier && (
-                  <span className="text-xs text-purple-400 ml-2">{TIERS[r.winning_tier]}</span>
-                )}
-                <span className="text-green-400 text-xs ml-2 font-bold">{(r.pot || 0).toFixed(3)} SOL</span>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Selected round detail */}
-        {selectedRound && (
-          <>
-            {/* Pot breakdown */}
-            <div className="rounded-2xl border border-purple-800 p-4 mb-4" style={{ background: "linear-gradient(135deg,#0d0020,#1a0030)" }}>
-              <p className="text-purple-300 font-bold mb-3">Round #{selectedRound.id} Breakdown</p>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-green-900/30 rounded-xl p-3 border border-green-800">
-                  <p className="text-green-400 text-xs font-bold">WINNER POOL</p>
-                  <p className="text-green-300 font-black text-xl">{winnerPool} SOL</p>
-                  <p className="text-green-700 text-xs">80% of pot</p>
-                </div>
-                <div className="bg-purple-900/30 rounded-xl p-3 border border-purple-800">
-                  <p className="text-purple-400 text-xs font-bold">YOUR RAKE</p>
-                  <p className="text-purple-300 font-black text-xl">{rake} SOL</p>
-                  <p className="text-purple-700 text-xs">19% of pot</p>
-                </div>
-                <div className="bg-yellow-900/30 rounded-xl p-3 border border-yellow-800">
-                  <p className="text-yellow-400 text-xs font-bold">JACKPOT CUT</p>
-                  <p className="text-yellow-300 font-black text-xl">{jackpotCut} SOL</p>
-                  <p className="text-yellow-700 text-xs">1% of pot</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Round list */}
+          <div>
+            <h2 className="text-purple-300 font-bold mb-3">Rounds (newest first)</h2>
+            <div className="space-y-2">
+              {rounds.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => loadRoundDetail(r)}
+                  className={`w-full text-left rounded-xl px-4 py-3 border transition-all ${
+                    selected?.id === r.id
+                      ? "border-purple-400 bg-purple-900/50"
+                      : "border-purple-900 bg-purple-900/20 hover:bg-purple-900/40"
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-white text-sm font-bold">
+                      {r.date} {String(r.hour).padStart(2,"0")}:00
+                    </span>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      r.settled ? "bg-green-900 text-green-400" : "bg-yellow-900 text-yellow-400"
+                    }`}>
+                      {r.settled ? "SETTLED" : "OPEN"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-purple-400 text-xs">Pot: {(r.pot||0).toFixed(3)} SOL</span>
+                    {r.winning_tier && (
+                      <span className="text-green-400 text-xs">{TIERS[r.winning_tier]}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* Payouts */}
-            {payouts.length > 0 ? (
-              <div className="rounded-2xl border border-green-800 p-4 mb-4" style={{ background: "linear-gradient(135deg,#001500,#002000)" }}>
-                <p className="text-green-300 font-bold mb-3">💸 SEND THESE PAYOUTS</p>
-                <div className="space-y-2">
-                  {payouts.map((p, i) => (
-                    <div key={i} className="bg-green-900/20 rounded-xl p-3 border border-green-900">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-green-400 font-black text-lg">{p.payout} SOL</span>
-                        <span className="text-green-700 text-xs">bet: {p.bet} SOL</span>
-                      </div>
-                      <p className="text-gray-300 text-xs font-mono break-all">{p.wallet}</p>
+          {/* Round detail */}
+          <div>
+            {selected ? (
+              <div>
+                <h2 className="text-purple-300 font-bold mb-3">
+                  Round Detail — {selected.date} {String(selected.hour).padStart(2,"0")}:00
+                </h2>
+
+                <div className="bg-purple-900/20 border border-purple-800 rounded-xl p-4 mb-4 space-y-1 text-sm">
+                  <p><span className="text-purple-400">Status:</span> <span className={selected.settled?"text-green-400":"text-yellow-400"}>{selected.settled?"Settled":"Open"}</span></p>
+                  <p><span className="text-purple-400">Pot:</span> <span className="text-white">{(selected.pot||0).toFixed(4)} SOL</span></p>
+                  <p><span className="text-purple-400">Start price:</span> <span className="text-white">${(selected.start_price||0).toFixed(2)}</span></p>
+                  {selected.end_price && <p><span className="text-purple-400">End price:</span> <span className="text-white">${selected.end_price.toFixed(2)}</span></p>}
+                  {selected.winning_tier && <p><span className="text-purple-400">Winner:</span> <span className="text-green-400">{TIERS[selected.winning_tier]}</span></p>}
+                  {selected.is_rollover && <p className="text-yellow-400 font-bold">🔥 ROLLOVER ROUND</p>}
+                </div>
+
+                {/* Payouts */}
+                {payouts.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-green-400 font-bold mb-2">💸 SEND THESE PAYOUTS</h3>
+                    <div className="space-y-2">
+                      {payouts.map((p, i) => (
+                        <div key={i} className="bg-green-900/20 border border-green-800 rounded-xl p-3">
+                          <p className="text-white text-xs font-mono break-all">{p.wallet}</p>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-purple-400 text-xs">Bet: {p.bet} SOL</span>
+                            <span className="text-green-400 font-black text-sm">→ {p.payout} SOL</span>
+                          </div>
+                          {p.tx && (
+                            <a
+                              href={`https://solscan.io/tx/${p.tx}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-500 text-xs underline"
+                            >
+                              View tx ↗
+                            </a>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <div className="mt-3 p-3 bg-green-900/30 rounded-xl border border-green-800">
-                  <p className="text-green-400 text-xs font-bold">TOTAL TO SEND: {payouts.reduce((s, p) => s + p.payout, 0).toFixed(6)} SOL</p>
-                  <p className="text-green-700 text-xs mt-1">You keep: {rake} SOL rake + {jackpotCut} SOL jackpot contribution</p>
-                </div>
-              </div>
-            ) : selectedRound.settled ? (
-              <div className="rounded-2xl border border-orange-800 p-4 mb-4 text-center">
-                <p className="text-orange-400 font-bold">🔄 Rollover Round — no winners, pot carried over</p>
+                    <div className="mt-3 bg-purple-900/30 border border-purple-700 rounded-xl p-3 text-center">
+                      <p className="text-purple-400 text-xs">Total to send</p>
+                      <p className="text-white font-black text-xl">
+                        {payouts.reduce((sum, p) => sum + p.payout, 0).toFixed(4)} SOL
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {selected.settled && payouts.length === 0 && (
+                  <div className="bg-yellow-900/20 border border-yellow-800 rounded-xl p-4 text-center">
+                    <p className="text-yellow-400 font-bold">🔥 No winners — pot rolled over</p>
+                  </div>
+                )}
+
+                {/* All bets */}
+                {bets.length > 0 && (
+                  <div>
+                    <h3 className="text-purple-300 font-bold mb-2">All Bets ({bets.length})</h3>
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {bets.map((b, i) => (
+                        <div key={i} className={`flex justify-between text-xs rounded-lg px-3 py-2 ${
+                          b.tier === selected.winning_tier
+                            ? "bg-green-900/30 border border-green-800"
+                            : "bg-purple-900/20"
+                        }`}>
+                          <span className="text-gray-400 font-mono">{b.wallet.slice(0,8)}...{b.wallet.slice(-4)}</span>
+                          <span className="text-purple-300">{TIERS[b.tier]}</span>
+                          <span className="text-white font-bold">{b.amount} SOL</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {loading && <p className="text-purple-400 text-center mt-4">Loading...</p>}
               </div>
             ) : (
-              <div className="rounded-2xl border border-yellow-800 p-4 mb-4 text-center">
-                <p className="text-yellow-400 font-bold">⏳ Round still active — not settled yet</p>
+              <div className="flex items-center justify-center h-64 text-purple-600">
+                ← Select a round to see details
               </div>
             )}
-
-            {/* All bets */}
-            <div className="rounded-2xl border border-purple-900 p-4 mb-4">
-              <p className="text-purple-300 font-bold mb-3">All Bets This Round ({bets.length})</p>
-              <div className="space-y-2">
-                {bets.map((b, i) => (
-                  <div key={i} className={`rounded-xl p-3 border text-xs ${b.tier === selectedRound.winning_tier ? "border-green-700 bg-green-900/20" : "border-purple-900 bg-purple-900/10"}`}>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-purple-300 font-bold">{TIERS[b.tier] || b.tier}</span>
-                      <span className="text-green-400 font-bold">{b.amount} SOL</span>
-                    </div>
-                    <p className="text-gray-500 font-mono break-all">{b.wallet}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        <button onClick={loadData} className="w-full py-3 rounded-xl font-bold text-sm border border-purple-800 text-purple-400 hover:bg-purple-900/20">
-          🔄 Refresh
-        </button>
-
+          </div>
+        </div>
       </div>
     </main>
   );
