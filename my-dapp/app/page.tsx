@@ -141,7 +141,7 @@ export default function Home() {
 
     const winningBets = bets.filter((b:any) => b.tier === winningTier.value);
     const totalWinningAmount = winningBets.reduce((sum:number, b:any) => sum + b.amount, 0);
-    const payoutPool = pot * 0.80;
+    const payoutPool = pot * 0.89;
 
     // Build payout list
     const payouts: {wallet:string, amount:number}[] = winningBets.map((b:any) => ({
@@ -401,8 +401,8 @@ export default function Home() {
       setTxSig(sig);
 
       // Record bet in Supabase
-      const jackpotCut = isRollover ? a*0.01 : a*0.01;
-      const potCut = a*0.80;
+      const jackpotCut = a*0.01;
+      const potCut = a*0.89;
       const newPot = parseFloat((pot+potCut).toFixed(4));
       const newJackpot = parseFloat((jackpot+jackpotCut).toFixed(4));
 
