@@ -75,12 +75,6 @@ export default function Home() {
       .eq('date', date)
       .single();
     if (!data) {
-      const { data: newRound } = await supabase
-        .from('rounds')
-        .insert({ hour, date, start_price: price || 0, pot: 0, jackpot: 0.041 })
-        .select()
-        .single();
-      data = newRound;
     }
     if (data) {
       setRoundId(data.id);
