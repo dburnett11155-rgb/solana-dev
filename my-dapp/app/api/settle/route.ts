@@ -148,6 +148,27 @@ export async function POST(req: NextRequest) {
       results.push({ roundId: round.id, winningTier: winningTier.label, pctChange: pctChange.toFixed(3), payouts, isRollover })
     }
 
+    // Auto-create current hour round if it doesnt exist
+    const { data: existingRound } = await supabase
+      .from("rounds")
+      .select("id")
+      .eq("date", currentDate)
+      .eq("hour", currentHour)
+      .single()
+
+    if (!existingRound) {
+      await supabase.from("rounds").insert({
+        hour: currentHour,
+        date: currentDate,
+        start_price: currentPrice,
+        pot: 0,
+        jackpot: 0.041,
+        is_rollover: false,
+        rollover_amount: 0,
+        settled: false
+      })
+    }
+
     return NextResponse.json({ ok: true, settled: results })
 
   } catch (e: any) {
