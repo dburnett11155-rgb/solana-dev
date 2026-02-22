@@ -1,0 +1,16 @@
+name: Hourly Settlement
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger settlement
+        run: |
+          curl -X POST https://solana-dev-seven.vercel.app/api/settle \
+            -H "Authorization: Bearer ${{ secrets.SETTLE_SECRET }}" \
+            -H "Content-Type: application/json"
