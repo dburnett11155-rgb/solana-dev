@@ -49,30 +49,34 @@ export async function POST(req: NextRequest) {
     const currentHour = now.getHours()
     const currentDate = now.toISOString().slice(0, 10)
 
-    // Get ALL unsettled rounds except the current hour
-    const { data: rounds } = await supabase
+    // Get ALL unsettled rounds
+    const { data: allRounds } = await supabase
       .from('rounds')
       .select('*')
       .eq('settled', false)
-      .not('date', 'eq', currentDate)
-      .or(`date.lt.${currentDate},hour.lt.${currentHour}`)
       .order('created_at', { ascending: true })
 
-    if (!rounds || rounds.length === 0) {
+    if (!allRounds || allRounds.length === 0) {
       return NextResponse.json({ ok: true, message: 'No unsettled rounds found' })
+    }
+
+    // Filter out current round in JS
+    const rounds = allRounds.filter(r => {
+      if (r.date === currentDate && r.hour === currentHour) return false
+      return true
+    })
+
+    if (rounds.length === 0) {
+      return NextResponse.json({ ok: true, message: 'Only current round is open — nothing to settle' })
     }
 
     const results = []
 
     for (const round of rounds) {
-      // Skip current round
-      if (round.date === currentDate && round.hour === currentHour) continue
-
-      // If start_price is 0 or missing, mark it settled with no winner
+      // No start price — mark settled as rollover
       if (!round.start_price || round.start_price === 0) {
         await supabase.from('rounds').update({
           settled: true,
-          winning_tier: null,
           end_price: currentPrice,
           is_rollover: true
         }).eq('id', round.id)
@@ -85,9 +89,7 @@ export async function POST(req: NextRequest) {
       if (!winningTier) continue
 
       const { data: bets } = await supabase
-        .from('bets')
-        .select('*')
-        .eq('round_id', round.id)
+        .from('bets').select('*').eq('round_id', round.id)
 
       const allBets = bets || []
       const winningBets = allBets.filter((b: any) => b.tier === winningTier.value)
@@ -107,7 +109,6 @@ export async function POST(req: NextRequest) {
         is_rollover: isRollover
       }).eq('id', round.id)
 
-      // Update streaks
       for (const bet of allBets) {
         const won = bet.tier === winningTier.value
         const { data: existing } = await supabase
@@ -140,17 +141,11 @@ export async function POST(req: NextRequest) {
       if (allBets.length > 0) {
         await sendEmail('Dburnett11155@gmail.com',
           `Degen Echo Round ${round.id} Settled`,
-          `Round ${round.id} settled!\nDate: ${round.date} Hour: ${round.hour}\nWinning tier: ${winningTier.label}\nSOL moved: ${pctChange.toFixed(3)}%\nTotal pot: ${round.pot} SOL\n\nPAYOUTS:\n${payoutText}`
+          `Round ${round.id}\nDate: ${round.date} Hour: ${round.hour}\nWinner: ${winningTier.label}\nSOL moved: ${pctChange.toFixed(3)}%\nPot: ${round.pot} SOL\n\nPAYOUTS:\n${payoutText}`
         )
       }
 
-      results.push({
-        roundId: round.id,
-        winningTier: winningTier.label,
-        pctChange: pctChange.toFixed(3),
-        payouts,
-        isRollover
-      })
+      results.push({ roundId: round.id, winningTier: winningTier.label, pctChange: pctChange.toFixed(3), payouts, isRollover })
     }
 
     return NextResponse.json({ ok: true, settled: results })
