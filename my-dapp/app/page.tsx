@@ -5,6 +5,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { supabase } from "./lib/supabase";
+import ShareButton from "./components/ShareButton";
 
 const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
 const JACKPOT_STREAK = 10;
@@ -565,6 +566,15 @@ export default function Home() {
               View on Solscan ↗
             </a>
           </div>
+        )}
+        {betPlaced && txSig && (
+          <ShareButton
+            betAmount={amount}
+            tierLabel={TIERS.find(t => t.value === choice)?.label ?? ""}
+            tierValue={choice ?? ""}
+            potSize={totalPot}
+            dAppUrl="https://solana-dev-seven.vercel.app"
+          />
         )}
 
         {error&&(
