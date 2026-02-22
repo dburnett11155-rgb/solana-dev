@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       const allBets = bets || []
       const winningBets = allBets.filter((b: any) => b.tier === winningTier.value)
       const totalWinningAmount = winningBets.reduce((sum: number, b: any) => sum + b.amount, 0)
-      const payoutPool = (round.pot || 0) * 0.80
+      const payoutPool = (round.pot || 0) * 0.89
       const isRollover = winningBets.length === 0
 
       const payouts = winningBets.map((b: any) => ({
