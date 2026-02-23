@@ -216,6 +216,7 @@ export default function Home() {
     // Create new round
     const newHour = getCurrentHour();
     const newPot = isRolloverRound ? pot : 0;
+    const newRolloverAmount = isRolloverRound ? (rolloverAmount + pot) : 0;
     const { data: newRound } = await supabase.from('rounds').insert({
       hour: newHour,
       date: getTodayStr(),
@@ -223,7 +224,7 @@ export default function Home() {
       pot: newPot,
       jackpot: jackpot,
       is_rollover: isRolloverRound,
-      rollover_amount: isRolloverRound ? pot : 0
+      rollover_amount: newRolloverAmount
     }).select().single();
 
     if (newRound) {
@@ -432,7 +433,7 @@ export default function Home() {
   const priceUp = prevPrice&&price&&price>prevPrice;
   const priceDown = prevPrice&&price&&price<prevPrice;
   const priceColor = priceUp?"text-green-400":priceDown?"text-red-400":"text-purple-300";
-  const totalPot = isRollover ? pot+rolloverAmount : pot;
+  const totalPot = pot + rolloverAmount;
   const liveTier = liveChange!==null ? TIERS.find(t=>t.check(liveChange!)) : null;
 
   return (
