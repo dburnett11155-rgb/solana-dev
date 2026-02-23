@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { supabase } from "./lib/supabase";
 import ShareButton from "./components/ShareButton";
@@ -447,9 +447,7 @@ export default function Home() {
             </h1>
             <p className="text-xs text-purple-400">Predict SOL. Stack gains.</p>
           </div>
-          <div className="scale-90 origin-right">
-            <WalletMultiButton />
-          </div>
+
         </div>
 
         {/* Last result */}

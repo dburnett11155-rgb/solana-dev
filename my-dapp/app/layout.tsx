@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import { Providers } from "./providers";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
+import Navbar from "./components/Navbar";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Degen Echo",
-  description: "Predict SOL. Win big.",
+  description: "Predict SOL. Stack gains.",
 };
 
 export default function RootLayout({
@@ -14,8 +18,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <body className={inter.className} style={{ background: "#0a0010" }}>
+        <Providers>
+          <Navbar />
+          <div className="pt-14">{children}</div>
+        </Providers>
       </body>
     </html>
   );
