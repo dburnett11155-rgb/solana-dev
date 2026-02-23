@@ -5,6 +5,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { supabase } from "./lib/supabase";
+import SolChart from "./components/SolChart";
 import ShareButton from "./components/ShareButton";
 
 const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
@@ -540,7 +541,7 @@ export default function Home() {
               </span>
             </div>
           )}
-          <div ref={chartRef} className="w-full rounded-xl overflow-hidden" style={{height:"140px",background:"#0d0020"}} />
+          <SolChart roundStartPrice={roundStartPrice} />
         </div>
 
         {/* Pot */}
