@@ -50,6 +50,7 @@ export default function TransparencyPage() {
 
         <div className="rounded-2xl p-5 border border-purple-900 mb-4" style={{ background: "linear-gradient(135deg,#0d0020,#0a0018)" }}>
           <p className="text-purple-300 font-bold mb-2">⏱ Payout timing</p>
+          <p className="text-gray-400 text-sm leading-relaxed">Betting closes 5 minutes before each round ends. No bets are accepted in the final 5 minutes. A minimum bet of 0.1 SOL is required for wins to count toward the jackpot streak. </p>
           <p className="text-gray-400 text-sm leading-relaxed">
             Payouts are processed manually within 1 hour of each round closing. Winners receive SOL directly to their connected wallet. All transactions are verifiable on-chain.
           </p>

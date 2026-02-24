@@ -22,7 +22,8 @@ export default function RulesPage() {
             <p>1. Connect your Phantom wallet.</p>
             <p>2. Each hour a new round opens. Pick which tier you think SOL will land in by the end of the hour.</p>
             <p>3. Place your SOL bet. You can bet any amount at any time during the 60-minute round.</p>
-            <p>4. At the top of the hour the round settles automatically. If your tier wins, you split the pot proportional to your bet size.</p>
+            <p>4. Betting closes at the <span className="text-purple-300 font-bold">55 minute mark</span>. No bets are accepted in the final 5 minutes of a round.</p>
+            <p>5. At the top of the hour the round settles automatically. If your tier wins, you split the pot proportional to your bet size.</p>
           </div>
         </div>
 
@@ -90,6 +91,7 @@ export default function RulesPage() {
             <p>• The jackpot starts at <span className="text-yellow-400 font-bold">2 SOL</span> and grows with every bet.</p>
             <p>• Hit a <span className="text-yellow-400 font-bold">8-round win streak</span> to claim the entire jackpot.</p>
             <p>• Only bets placed in the <span className="text-yellow-400 font-bold">first 30 minutes</span> of a round count toward your streak.</p>
+            <p>• A minimum bet of <span className="text-yellow-400 font-bold">0.1 SOL</span> is required for a win to count toward your streak.</p>
             <p>• Late bets (30–60 min) can still win the pot but will never trigger the jackpot.</p>
             <p>• The jackpot never resets until it is won.</p>
             <p>• Win streak resets to 0 if you lose or skip a round.</p>
