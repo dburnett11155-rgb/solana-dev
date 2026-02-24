@@ -11,6 +11,38 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
   const chartInstance = useRef<any>(null);
   const seriesInstance = useRef<any>(null);
   const priceLineRef = useRef<any>(null);
+  const roundPriceRef = useRef<number | null>(null);
+
+  // Keep ref in sync with prop
+  useEffect(() => {
+    roundPriceRef.current = roundStartPrice;
+  }, [roundStartPrice]);
+
+  // Draw/update price line whenever roundStartPrice changes and series exists
+  useEffect(() => {
+    if (!roundStartPrice) return;
+
+    function tryDrawLine() {
+      if (!seriesInstance.current) {
+        setTimeout(tryDrawLine, 500);
+        return;
+      }
+      if (priceLineRef.current) {
+        try { seriesInstance.current.removePriceLine(priceLineRef.current); } catch {}
+        priceLineRef.current = null;
+      }
+      priceLineRef.current = seriesInstance.current.createPriceLine({
+        price: roundStartPrice,
+        color: "#facc15",
+        lineWidth: 2,
+        lineStyle: 1,
+        axisLabelVisible: true,
+        title: "Round open",
+      });
+    }
+
+    tryDrawLine();
+  }, [roundStartPrice]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -21,6 +53,7 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
       if (chartInstance.current) {
         chartInstance.current.remove();
         chartInstance.current = null;
+        seriesInstance.current = null;
       }
 
       const chart = LW.createChart(chartRef.current!, {
@@ -81,6 +114,18 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
         console.error("Chart fetch failed", e);
       }
 
+      // Draw round open line now that series is ready
+      if (roundPriceRef.current) {
+        priceLineRef.current = series.createPriceLine({
+          price: roundPriceRef.current,
+          color: "#facc15",
+          lineWidth: 2,
+          lineStyle: 1,
+          axisLabelVisible: true,
+          title: "Round open",
+        });
+      }
+
       const interval = setInterval(async () => {
         try {
           const res = await fetch("https://api.kraken.com/0/public/Ticker?pair=SOLUSD");
@@ -101,24 +146,9 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
       if (cleanup) cleanup();
       chartInstance.current?.remove();
       chartInstance.current = null;
+      seriesInstance.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    if (!seriesInstance.current || !roundStartPrice) return;
-    if (priceLineRef.current) {
-      try { seriesInstance.current.removePriceLine(priceLineRef.current); } catch {}
-      priceLineRef.current = null;
-    }
-    priceLineRef.current = seriesInstance.current.createPriceLine({
-      price: roundStartPrice,
-      color: "#facc15",
-      lineWidth: 1,
-      lineStyle: 2,
-      axisLabelVisible: true,
-      title: "Round open",
-    });
-  }, [roundStartPrice]);
 
   return (
     <div
