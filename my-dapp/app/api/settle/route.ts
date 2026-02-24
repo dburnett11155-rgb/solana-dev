@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -13,6 +15,14 @@ const TIERS = [
   { label: '📉 Small Dump', value: 'smalldump', check: (p: number) => p <= -0.5 && p >= -1.5 },
   { label: '💀 Big Dump',   value: 'bigdump',   check: (p: number) => p < -1.5 },
 ]
+
+function getMultiplier(minutesIntoRound: number): number {
+  if (minutesIntoRound < 15) return 1.8
+  if (minutesIntoRound < 30) return 1.6
+  if (minutesIntoRound < 45) return 1.4
+  if (minutesIntoRound < 55) return 1.2
+  return 1.0
+}
 
 async function getSolPrice(): Promise<number> {
   const res = await fetch('https://api.kraken.com/0/public/Ticker?pair=SOLUSD')
@@ -49,7 +59,6 @@ export async function POST(req: NextRequest) {
     const currentHour = now.getHours()
     const currentDate = now.toISOString().slice(0, 10)
 
-    // Get ALL unsettled rounds
     const { data: allRounds } = await supabase
       .from('rounds')
       .select('*')
@@ -60,7 +69,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'No unsettled rounds found' })
     }
 
-    // Filter out current round in JS
     const rounds = allRounds.filter(r => {
       if (r.date === currentDate && r.hour === currentHour) return false
       return true
@@ -73,7 +81,6 @@ export async function POST(req: NextRequest) {
     const results = []
 
     for (const round of rounds) {
-      // No start price — mark settled as rollover
       if (!round.start_price || round.start_price === 0) {
         await supabase.from('rounds').update({
           settled: true,
@@ -93,13 +100,28 @@ export async function POST(req: NextRequest) {
 
       const allBets = bets || []
       const winningBets = allBets.filter((b: any) => b.tier === winningTier.value)
-      const totalWinningAmount = winningBets.reduce((sum: number, b: any) => sum + b.amount, 0)
       const payoutPool = (round.pot || 0) * 0.89
       const isRollover = winningBets.length === 0
 
-      const payouts = winningBets.map((b: any) => ({
+      // Round start time reconstructed from date + hour
+      const roundStartTime = new Date(`${round.date}T${String(round.hour).padStart(2,'0')}:00:00`)
+
+      // Calculate effective weighted amount for each winning bet
+      const weightedBets = winningBets.map((b: any) => {
+        const betTime = new Date(b.created_at)
+        const minutesIntoRound = Math.max(0, (betTime.getTime() - roundStartTime.getTime()) / 60000)
+        const multiplier = getMultiplier(minutesIntoRound)
+        const effectiveAmount = b.amount * multiplier
+        return { ...b, effectiveAmount, multiplier, minutesIntoRound: minutesIntoRound.toFixed(1) }
+      })
+
+      const totalEffective = weightedBets.reduce((sum: number, b: any) => sum + b.effectiveAmount, 0)
+
+      const payouts = weightedBets.map((b: any) => ({
         wallet: b.wallet,
-        amount: parseFloat(((b.amount / totalWinningAmount) * payoutPool).toFixed(6))
+        amount: parseFloat(((b.effectiveAmount / totalEffective) * payoutPool).toFixed(6)),
+        multiplier: b.multiplier,
+        minutesIntoRound: b.minutesIntoRound
       }))
 
       await supabase.from('rounds').update({
@@ -135,29 +157,28 @@ export async function POST(req: NextRequest) {
       }
 
       const payoutText = payouts.length > 0
-        ? payouts.map((p: any) => `${p.wallet}: ${p.amount} SOL`).join('\n')
+        ? payouts.map((p: any) => `${p.wallet}: ${p.amount} SOL (${p.multiplier}x multiplier, bet at ${p.minutesIntoRound}min)`).join('\n')
         : 'No winners — pot rolled over'
 
       if (allBets.length > 0) {
         await sendEmail('Dburnett11155@gmail.com',
           `Degen Echo Round ${round.id} Settled`,
-          `Round ${round.id}\nDate: ${round.date} Hour: ${round.hour}\nWinner: ${winningTier.label}\nSOL moved: ${pctChange.toFixed(3)}%\nPot: ${round.pot} SOL\n\nPAYOUTS:\n${payoutText}`
+          `Round ${round.id}\nDate: ${round.date} Hour: ${round.hour}\nWinner: ${winningTier.label}\nSOL moved: ${pctChange.toFixed(3)}%\nPot: ${round.pot} SOL\n\nPAYOUTS (time-weighted):\n${payoutText}`
         )
       }
 
       results.push({ roundId: round.id, winningTier: winningTier.label, pctChange: pctChange.toFixed(3), payouts, isRollover })
     }
 
-    // Auto-create current hour round if it doesnt exist
     const { data: existingRound } = await supabase
-      .from("rounds")
-      .select("id")
-      .eq("date", currentDate)
-      .eq("hour", currentHour)
+      .from('rounds')
+      .select('id')
+      .eq('date', currentDate)
+      .eq('hour', currentHour)
       .single()
 
     if (!existingRound) {
-      await supabase.from("rounds").insert({
+      await supabase.from('rounds').insert({
         hour: currentHour,
         date: currentDate,
         start_price: currentPrice,
