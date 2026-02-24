@@ -440,6 +440,7 @@ export default function Home() {
 
   const total = Object.values(tierCounts).reduce((a,b)=>a+b,0);
   const timerColor = secondsLeft<300?"text-red-400 animate-pulse":secondsLeft<600?"text-yellow-400":"text-green-400";
+  const bettingClosed = secondsLeft < 300;
   const priceUp = prevPrice&&price&&price>prevPrice;
   const priceDown = prevPrice&&price&&price<prevPrice;
   const priceColor = priceUp?"text-green-400":priceDown?"text-red-400":"text-purple-300";
@@ -540,7 +541,7 @@ export default function Home() {
             <div className="text-right">
               <p className="text-purple-400 text-xs font-bold">ROUND ENDS</p>
               <p className={`text-2xl font-black ${timerColor}`}>{timeLeft}</p>
-              {secondsLeft<300&&<p className="text-red-400 text-xs animate-pulse">⚠️ CLOSING SOON</p>}
+              {secondsLeft<300&&<p className="text-red-400 text-xs animate-pulse">🔒 BETTING CLOSED</p>}
             </div>
           </div>
           {liveChange!==null&&liveTier&&(
@@ -646,14 +647,14 @@ export default function Home() {
             ):(
               <button
                 onClick={handleBet}
-                disabled={!choice||sending}
+                disabled={!choice||sending||bettingClosed}
                 className={`w-full py-4 rounded-xl font-black text-lg transition-all ${
                   choice&&!sending
                     ?"bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 shadow-lg text-white"
                     :"bg-gray-800 text-gray-600 cursor-not-allowed"
                 }`}
               >
-                {sending?"⏳ Confirming...":choice?`🎲 BET ${amount} SOL ON ${TIERS.find(t=>t.value===choice)?.label}`:"⬆️ Pick a tier first"}
+                {bettingClosed?"🔒 Betting closed for this round":sending?"⏳ Confirming...":choice?`🎲 BET ${amount} SOL ON ${TIERS.find(t=>t.value===choice)?.label}`:"⬆️ Pick a tier first"}
               </button>
             )
           ):(

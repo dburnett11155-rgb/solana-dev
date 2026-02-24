@@ -17,6 +17,7 @@ const TIERS = [
 ]
 
 const JACKPOT_STREAK = 8
+const STREAK_MIN_BET = 0.1
 const JACKPOT_SEED = 20.0
 const JACKPOT_RESET = 2.0
 
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
       for (const bet of allBets) {
         const won = bet.tier === winningTier.value
         const betTime = new Date(bet.created_at).getTime()
-        const isEarlyBet = betTime < thirtyMinMark
+        const isEarlyBet = betTime < thirtyMinMark && bet.amount >= STREAK_MIN_BET
 
         const { data: existing } = await supabase.from('streaks').select('*').eq('wallet', bet.wallet).single()
         let newStreak = existing?.current_streak || 0
