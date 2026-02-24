@@ -242,21 +242,34 @@ export default function Home() {
     }
   }, [roundId, roundStartPrice, price, pot, jackpot, publicKey]);
 
-  // Check for hour change every 30 seconds
+  // Check for hour change every 30 seconds and refresh round data
   useEffect(() => {
     const i = setInterval(async () => {
       const hour = getCurrentHour();
       const date = getTodayStr();
       const { data } = await supabase
         .from('rounds')
-        .select('id,hour,date,settled')
+        .select('*')
         .eq('hour', hour)
         .eq('date', date)
         .single();
-      if (!data) await settleRound();
+      if (!data) {
+        await settleRound();
+      } else if (data.id !== roundId) {
+        setRoundId(data.id);
+        setPot(data.pot || 0);
+        setJackpot(data.jackpot || 2.0);
+        setIsRollover(data.is_rollover || false);
+        setRolloverAmount(data.rollover_amount || 0);
+        if (data.start_price) setRoundStartPrice(data.start_price);
+        setTierCounts({bigpump:0,smallpump:0,stagnate:0,smalldump:0,bigdump:0});
+        setLiveFeed([]);
+        setBetPlaced(false);
+        setChoice(null);
+      }
     }, 30000);
     return () => clearInterval(i);
-  }, [settleRound]);
+  }, [settleRound, roundId]);
 
   // Fetch live price
   useEffect(() => {
