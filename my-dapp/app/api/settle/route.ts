@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
         date: currentDate,
         start_price: currentPrice,
         pot: 0,
-        jackpot: JACKPOT_SEED,
+        jackpot: 20.0,
         is_rollover: false,
         rollover_amount: 0,
         settled: false
