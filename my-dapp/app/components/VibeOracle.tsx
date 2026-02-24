@@ -81,7 +81,7 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
         style={{ background: "linear-gradient(135deg,#1a0020,#0d0018)" }}
       >
         <p className="text-pink-300 font-bold text-sm">🔮 VIBE ORACLE</p>
-        <p className="text-gray-500 text-xs mt-1">AI probability co-pilot · small fee per use</p>
+        <p className="text-gray-500 text-xs mt-1">AI probability co-pilot · 0.005 SOL per use</p>
       </button>
     );
   }
@@ -102,7 +102,7 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
             <p className="text-gray-400 text-xs mb-2 leading-relaxed">
               The Oracle reads live SOL price action, round timing, and current bets to give you an AI probability breakdown for each tier.
             </p>
-            <p className="text-pink-400 text-xs font-bold mb-4">A small fee applies per consultation.</p>
+            <p className="text-pink-400 text-xs font-bold mb-4">0.005 SOL per consultation</p>
             {!connected && (
               <p className="text-yellow-500 text-xs mb-3">Connect your wallet to use the Oracle.</p>
             )}
