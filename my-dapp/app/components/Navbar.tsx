@@ -34,12 +34,8 @@ export default function Navbar() {
         style={{ background: "rgba(10,0,16,0.95)", backdropFilter: "blur(12px)" }}
       >
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="text-lg font-black bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent">
-              🎰 DEGEN ECHO
-            </span>
-          </Link>
 
+          {/* Desktop links */}
           <div className="hidden sm:flex items-center gap-6">
             {links.map((l) => (
               <Link
@@ -57,7 +53,8 @@ export default function Navbar() {
             <WalletMultiButton />
           </div>
 
-          <div className="flex sm:hidden items-center gap-2">
+          {/* Mobile */}
+          <div className="flex sm:hidden items-center justify-between w-full">
             <WalletMultiButton />
             <button
               onClick={() => setOpen(!open)}
