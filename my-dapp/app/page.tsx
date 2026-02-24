@@ -7,6 +7,7 @@ import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana
 import { supabase } from "./lib/supabase";
 import SolChart from "./components/SolChart";
 import EchoArena from "./components/EchoArena";
+import VibeOracle from "./components/VibeOracle";
 import ShareButton from "./components/ShareButton";
 
 const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
@@ -675,6 +676,7 @@ export default function Home() {
           )}
         </div>
 
+        <VibeOracle price={price} hourOpen={krakenHourOpen} timeLeft={timeLeft} tierCounts={tierCounts} pot={totalPot} />
         <EchoArena roundId={roundId} walletAddress={publicKey?.toString()} />
 
         {/* Live feed */}
