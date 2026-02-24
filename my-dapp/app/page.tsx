@@ -6,6 +6,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { supabase } from "./lib/supabase";
 import SolChart from "./components/SolChart";
+import EchoArena from "./components/EchoArena";
 import ShareButton from "./components/ShareButton";
 
 const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
@@ -653,6 +654,8 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <EchoArena roundId={roundId} walletAddress={publicKey?.toString()} />
 
         {/* Live feed */}
         {liveFeed.length>0&&(
