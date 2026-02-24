@@ -64,6 +64,7 @@ export default function Home() {
   const [roundStartPrice, setRoundStartPrice] = useState<number|null>(null);
   const [lastResult, setLastResult] = useState<{winningTier:string,pctChange:number}|null>(null);
   const [liveChange, setLiveChange] = useState<number|null>(null);
+  const [krakenHourOpen, setKrakenHourOpen] = useState<number|null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
   // Load or create current round from Supabase
@@ -281,8 +282,9 @@ export default function Home() {
         setPrevPrice(price);
         setPrice(p);
         setPriceHistory(prev => [...prev, {time:Date.now(),value:p}].slice(-60));
-        if (roundStartPrice) {
-          setLiveChange(((p - roundStartPrice) / roundStartPrice) * 100);
+        const openPrice = krakenHourOpen || roundStartPrice;
+        if (openPrice) {
+          setLiveChange(((p - openPrice) / openPrice) * 100);
         }
       } catch {}
     }
@@ -291,14 +293,19 @@ export default function Home() {
     return () => clearInterval(i);
   }, [price, roundStartPrice]);
 
-  // Fetch price history for chart
+  // Fetch price history and hour open from Kraken
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const res = await fetch("https://api.kraken.com/0/public/OHLC?pair=SOLUSD&interval=60");
+        const res = await fetch("https://api.kraken.com/0/public/OHLC?pair=SOLUSD&interval=1");
         const data = await res.json();
         const candles = data.result.SOLUSD || data.result[Object.keys(data.result)[0]];
         setPriceHistory(candles.slice(-24).map((c:any[]) => ({time:c[0]*1000,value:parseFloat(c[4])})));
+        // Find hour open
+        const now = new Date();
+        const hourStartUnix = Math.floor(new Date(now.getFullYear(),now.getMonth(),now.getDate(),now.getHours(),0,0).getTime()/1000);
+        const hourCandle = candles.find((c:any[]) => c[0] >= hourStartUnix);
+        if (hourCandle) setKrakenHourOpen(parseFloat(hourCandle[1]));
       } catch {}
     }
     fetchHistory();
