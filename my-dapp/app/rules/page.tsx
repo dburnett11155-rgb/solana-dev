@@ -58,7 +58,7 @@ export default function RulesPage() {
         <div className="rounded-2xl p-5 border border-purple-900 mb-4" style={{ background: "linear-gradient(135deg,#0d0020,#0a0018)" }}>
           <p className="text-purple-300 font-bold mb-3">⏱ Time-Weighted Payouts</p>
           <p className="text-gray-400 text-sm leading-relaxed mb-3">
-            Bet early and win more. Your payout is multiplied based on when you placed your bet:
+            Bet early and win more. Your payout is multiplied based on when you placed your bet. Betting closes at the 55 minute mark — no bets accepted in the final 5 minutes.
           </p>
           <div className="space-y-2">
             <div className="flex justify-between items-center bg-purple-900/20 rounded-lg px-3 py-2">
@@ -77,9 +77,9 @@ export default function RulesPage() {
               <span className="text-white text-sm font-bold">45 – 55 min</span>
               <span className="text-orange-400 font-black">1.2×</span>
             </div>
-            <div className="flex justify-between items-center bg-purple-900/20 rounded-lg px-3 py-2">
+            <div className="flex justify-between items-center bg-red-900/20 rounded-lg px-3 py-2">
               <span className="text-white text-sm font-bold">55 – 60 min</span>
-              <span className="text-red-400 font-black">1.0×</span>
+              <span className="text-red-400 font-black">🔒 Closed</span>
             </div>
           </div>
         </div>
