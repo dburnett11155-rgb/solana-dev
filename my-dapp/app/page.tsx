@@ -542,7 +542,7 @@ export default function Home() {
               </span>
             </div>
           )}
-          <SolChart roundStartPrice={roundStartPrice} />
+          <SolChart />
         </div>
 
         {/* Pot */}
