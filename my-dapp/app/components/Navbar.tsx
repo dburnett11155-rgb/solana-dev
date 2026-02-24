@@ -11,6 +11,7 @@ export default function Navbar() {
 
   const links = [
     { href: "/", label: "Home" },
+    { href: "/rules", label: "Rules" },
     { href: "/transparency", label: "Transparency" },
   ];
 
