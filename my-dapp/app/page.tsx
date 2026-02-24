@@ -329,20 +329,7 @@ export default function Home() {
     return () => clearInterval(i);
   }, []);
 
-  // Slow fake bets
-  useEffect(() => {
-    function addFakeBet() {
-      const tierKeys = ["bigpump","smallpump","stagnate","smalldump","bigdump"];
-      const rc = tierKeys[Math.floor(Math.random()*tierKeys.length)] as keyof typeof tierCounts;
-      const amounts = ["0.1","0.1","0.2","0.25","0.5"];
-      const ra = amounts[Math.floor(Math.random()*amounts.length)];
-      setLiveFeed(prev => [{wallet:randomWallet(),choice:rc,amount:ra},...prev.slice(0,8)]);
-      setTierCounts(prev => ({...prev,[rc]:prev[rc]+1}));
-      setTimeout(addFakeBet, 45000+Math.random()*30000);
-    }
-    const t = setTimeout(addFakeBet, 60000);
-    return () => clearTimeout(t);
-  }, []);
+  
 
   // Draw chart
   useEffect(() => {
