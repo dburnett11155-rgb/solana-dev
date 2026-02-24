@@ -82,7 +82,7 @@ export default function Home() {
     if (data) {
       setRoundId(data.id);
       setPot(data.pot || 0);
-      setJackpot(data.jackpot || 0.041);
+      setJackpot(data.jackpot && data.jackpot > 0.1 ? data.jackpot : 2.0);
       setIsRollover(data.is_rollover || false);
       setRolloverAmount(data.rollover_amount || 0);
       if (data.start_price) setRoundStartPrice(data.start_price);
