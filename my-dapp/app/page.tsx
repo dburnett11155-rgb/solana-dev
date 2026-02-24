@@ -226,7 +226,7 @@ export default function Home() {
       date: getTodayStr(),
       start_price: price,
       pot: newPot,
-      jackpot: jackpot,
+      jackpot: jackpot < 20.0 ? 20.0 : jackpot,
       is_rollover: isRolloverRound,
       rollover_amount: newRolloverAmount
     }).select().single();
