@@ -16,6 +16,9 @@ const TIERS = [
   { label: '💀 Big Dump',   value: 'bigdump',   check: (p: number) => p < -1.5 },
 ]
 
+const JACKPOT_STREAK = 4
+const JACKPOT_SEED = 2.0
+
 function getMultiplier(minutesIntoRound: number): number {
   if (minutesIntoRound < 15) return 1.8
   if (minutesIntoRound < 30) return 1.6
@@ -103,10 +106,11 @@ export async function POST(req: NextRequest) {
       const payoutPool = (round.pot || 0) * 0.89
       const isRollover = winningBets.length === 0
 
-      // Round start time reconstructed from date + hour
+      // Round start time
       const roundStartTime = new Date(`${round.date}T${String(round.hour).padStart(2,'0')}:00:00`)
+      const thirtyMinMark = roundStartTime.getTime() + 30 * 60 * 1000
 
-      // Calculate effective weighted amount for each winning bet
+      // Time-weighted payouts
       const weightedBets = winningBets.map((b: any) => {
         const betTime = new Date(b.created_at)
         const minutesIntoRound = Math.max(0, (betTime.getTime() - roundStartTime.getTime()) / 60000)
@@ -131,12 +135,27 @@ export async function POST(req: NextRequest) {
         is_rollover: isRollover
       }).eq('id', round.id)
 
+      // Update streaks — only early bets (placed before 30 min mark) count toward jackpot streak
       for (const bet of allBets) {
         const won = bet.tier === winningTier.value
+        const betTime = new Date(bet.created_at).getTime()
+        const isEarlyBet = betTime < thirtyMinMark
+
         const { data: existing } = await supabase
           .from('streaks').select('*').eq('wallet', bet.wallet).single()
-        const newStreak = won ? (existing?.current_streak || 0) + 1 : 0
-        const jackpotHit = newStreak >= 10
+
+        // Streak only progresses for early bets
+        let newStreak = existing?.current_streak || 0
+        if (won && isEarlyBet) {
+          newStreak = newStreak + 1
+        } else if (!won) {
+          newStreak = 0
+        }
+        // Late bet that won: streak stays the same (no reset, no increment)
+
+        const jackpotHit = newStreak >= JACKPOT_STREAK
+        const currentJackpot = round.jackpot || JACKPOT_SEED
+
         if (existing) {
           await supabase.from('streaks').update({
             current_streak: jackpotHit ? 0 : newStreak,
@@ -150,14 +169,15 @@ export async function POST(req: NextRequest) {
             total_wins: won ? 1 : 0
           })
         }
+
         if (jackpotHit) {
-          await sendEmail('Dburnett11155@gmail.com', '🏆 JACKPOT HIT!',
-            `JACKPOT WINNER!\nWallet: ${bet.wallet}\nAmount: ${round.jackpot} SOL`)
+          await sendEmail('Dburnett11155@gmail.com', '🏆 JACKPOT HIT! 4-WIN STREAK!',
+            `JACKPOT WINNER!\nWallet: ${bet.wallet}\nJackpot: ${currentJackpot} SOL\n\nSend jackpot to this wallet immediately!\n\nNote: This was a verified early-bet 4-win streak.`)
         }
       }
 
       const payoutText = payouts.length > 0
-        ? payouts.map((p: any) => `${p.wallet}: ${p.amount} SOL (${p.multiplier}x multiplier, bet at ${p.minutesIntoRound}min)`).join('\n')
+        ? payouts.map((p: any) => `${p.wallet}: ${p.amount} SOL (${p.multiplier}x, bet at ${p.minutesIntoRound}min)`).join('\n')
         : 'No winners — pot rolled over'
 
       if (allBets.length > 0) {
@@ -183,7 +203,7 @@ export async function POST(req: NextRequest) {
         date: currentDate,
         start_price: currentPrice,
         pot: 0,
-        jackpot: 0.041,
+        jackpot: JACKPOT_SEED,
         is_rollover: false,
         rollover_amount: 0,
         settled: false

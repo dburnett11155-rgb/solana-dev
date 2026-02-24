@@ -10,7 +10,7 @@ import EchoArena from "./components/EchoArena";
 import ShareButton from "./components/ShareButton";
 
 const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
-const JACKPOT_STREAK = 10;
+const JACKPOT_STREAK = 4;
 const ADMIN_EMAIL = "Dburnett11155@gmail.com";
 
 const TIERS = [
@@ -48,7 +48,7 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(3600);
   const [pot, setPot] = useState(0);
-  const [jackpot, setJackpot] = useState(0.041);
+  const [jackpot, setJackpot] = useState(2.0);
   const [isRollover, setIsRollover] = useState(false);
   const [rolloverAmount, setRolloverAmount] = useState(0);
   const [betPlaced, setBetPlaced] = useState(false);
@@ -490,7 +490,7 @@ export default function Home() {
           <p className="text-yellow-300 font-black text-base">⚡ JACKPOT</p>
           <p className="text-yellow-400 font-black text-4xl my-1">{jackpot.toFixed(3)} SOL</p>
           <p className="text-yellow-600 text-xs mb-1">Grows with every bet. Never resets. Never been won.</p>
-          <p className="text-yellow-500 text-xs font-bold">🔥 Hit a 10 win streak — claim it all</p>
+          <p className="text-yellow-500 text-xs font-bold">🔥 Hit a 4 win streak — claim it all</p>
           {streak > 0 && (
             <div className="mt-3 bg-yellow-900/40 rounded-xl p-2">
               <p className="text-yellow-300 font-black text-sm">Your streak: {streak} / {JACKPOT_STREAK} 🔥</p>
@@ -514,7 +514,7 @@ export default function Home() {
         {jackpotWon && (
           <div className="bg-yellow-900/60 border-2 border-yellow-400 rounded-2xl p-6 mb-3 text-center">
             <p className="text-yellow-300 font-black text-3xl">🏆 JACKPOT!</p>
-            <p className="text-white font-black text-xl">10 WIN STREAK!</p>
+            <p className="text-white font-black text-xl">4 WIN STREAK!</p>
             <p className="text-yellow-400 text-sm mt-2">Payout incoming to your wallet!</p>
           </div>
         )}
