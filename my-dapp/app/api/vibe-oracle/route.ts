@@ -5,30 +5,20 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(req: NextRequest) {
   const { price, hourOpen, timeLeft, tierCounts, pot } = await req.json()
 
-  const prompt = `You are Vibe Oracle, an AI co-pilot for Degen Echo — a Solana price prediction game.
+  const pctChange = hourOpen ? (((price - hourOpen) / hourOpen) * 100).toFixed(3) : 'unknown'
+
+  const prompt = `You are Vibe Oracle, an AI co-pilot for Degen Echo, a Solana price prediction game. Be concise.
 
 Current data:
-- SOL current price: $${price}
-- Hour open price: $${hourOpen}
-- Change from open: ${hourOpen ? (((price - hourOpen) / hourOpen) * 100).toFixed(3) : 'unknown'}%
-- Time left in round: ${timeLeft}
-- Current pot: ${pot} SOL
-- Bets by tier: Big Pump: ${tierCounts.bigpump}, Small Pump: ${tierCounts.smallpump}, Stagnate: ${tierCounts.stagnate}, Small Dump: ${tierCounts.smalldump}, Big Dump: ${tierCounts.bigdump}
+- SOL price: $${price}
+- Hour open: $${hourOpen}
+- Change from open: ${pctChange}%
+- Time left: ${timeLeft}
+- Pot: ${pot} SOL
+- Bets: BigPump:${tierCounts.bigpump} SmallPump:${tierCounts.smallpump} Stagnate:${tierCounts.stagnate} SmallDump:${tierCounts.smalldump} BigDump:${tierCounts.bigdump}
 
-Based on this data give your analysis. Respond ONLY with a valid JSON object, no markdown, no explanation outside the JSON:
-{
-  "summary": "2-3 sentence vibe read on where SOL is heading this hour",
-  "probabilities": {
-    "bigpump": 0-100,
-    "smallpump": 0-100,
-    "stagnate": 0-100,
-    "smalldump": 0-100,
-    "bigdump": 0-100
-  },
-  "topPick": "bigpump|smallpump|stagnate|smalldump|bigdump",
-  "confidence": "low|medium|high",
-  "warning": "optional short warning or null"
-}`
+Respond with ONLY this JSON, no other text:
+{"summary":"2 sentence analysis","probabilities":{"bigpump":20,"smallpump":25,"stagnate":30,"smalldump":15,"bigdump":10},"topPick":"stagnate","confidence":"medium","warning":null}`
 
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -38,15 +28,20 @@ Based on this data give your analysis. Respond ONLY with a valid JSON object, no
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama3-70b-8192',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 400,
-        temperature: 0.7
+        max_tokens: 300,
+        temperature: 0.5
       })
     })
 
     const data = await res.json()
-    const text = data.choices?.[0]?.message?.content || ''
+    
+    if (!data.choices?.[0]?.message?.content) {
+      return NextResponse.json({ ok: false, error: 'No response from Groq: ' + JSON.stringify(data) }, { status: 500 })
+    }
+
+    const text = data.choices[0].message.content
     const clean = text.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
     return NextResponse.json({ ok: true, oracle: parsed })
