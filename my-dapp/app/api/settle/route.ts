@@ -16,7 +16,7 @@ const TIERS = [
   { label: '💀 Big Dump',   value: 'bigdump',   check: (p: number) => p < -1.5 },
 ]
 
-const JACKPOT_STREAK = 4
+const JACKPOT_STREAK = 8
 const JACKPOT_SEED = 2.0
 
 function getMultiplier(minutesIntoRound: number): number {

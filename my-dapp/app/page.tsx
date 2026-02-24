@@ -11,7 +11,7 @@ import VibeOracle from "./components/VibeOracle";
 import ShareButton from "./components/ShareButton";
 
 const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
-const JACKPOT_STREAK = 4;
+const JACKPOT_STREAK = 8;
 const ADMIN_EMAIL = "Dburnett11155@gmail.com";
 
 const TIERS = [
@@ -511,7 +511,7 @@ export default function Home() {
           <p className="text-yellow-300 font-black text-base">⚡ JACKPOT</p>
           <p className="text-yellow-400 font-black text-4xl my-1">{jackpot.toFixed(3)} SOL</p>
           <p className="text-yellow-600 text-xs mb-1">Grows with every bet. Never resets. Never been won.</p>
-          <p className="text-yellow-500 text-xs font-bold">🔥 Hit a 4 win streak — claim it all</p>
+          <p className="text-yellow-500 text-xs font-bold">🔥 Hit an 8 win streak — claim it all</p>
           {streak > 0 && (
             <div className="mt-3 bg-yellow-900/40 rounded-xl p-2">
               <p className="text-yellow-300 font-black text-sm">Your streak: {streak} / {JACKPOT_STREAK} 🔥</p>
@@ -535,7 +535,7 @@ export default function Home() {
         {jackpotWon && (
           <div className="bg-yellow-900/60 border-2 border-yellow-400 rounded-2xl p-6 mb-3 text-center">
             <p className="text-yellow-300 font-black text-3xl">🏆 JACKPOT!</p>
-            <p className="text-white font-black text-xl">4 WIN STREAK!</p>
+            <p className="text-white font-black text-xl">8 WIN STREAK!</p>
             <p className="text-yellow-400 text-sm mt-2">Payout incoming to your wallet!</p>
           </div>
         )}

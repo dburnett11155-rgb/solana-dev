@@ -88,7 +88,7 @@ export default function RulesPage() {
           <p className="text-yellow-300 font-bold mb-3">⚡ Jackpot Rules</p>
           <div className="space-y-2 text-gray-400 text-sm leading-relaxed">
             <p>• The jackpot starts at <span className="text-yellow-400 font-bold">2 SOL</span> and grows with every bet.</p>
-            <p>• Hit a <span className="text-yellow-400 font-bold">4-round win streak</span> to claim the entire jackpot.</p>
+            <p>• Hit a <span className="text-yellow-400 font-bold">8-round win streak</span> to claim the entire jackpot.</p>
             <p>• Only bets placed in the <span className="text-yellow-400 font-bold">first 30 minutes</span> of a round count toward your streak.</p>
             <p>• Late bets (30–60 min) can still win the pot but will never trigger the jackpot.</p>
             <p>• The jackpot never resets until it is won.</p>
