@@ -11,7 +11,7 @@ const supabase = createClient(
 const TIERS = [
   { label: '🚀 Big Pump',   value: 'bigpump',   check: (p: number) => p > 1.5 },
   { label: '📈 Small Pump', value: 'smallpump', check: (p: number) => p >= 0.5 && p <= 1.5 },
-  { label: '😴 Stagnate',   value: 'stagnate',  check: (p: number) => p > -0.5 && p < 0.5 },
+  { label: '😴 Stagnate',   value: 'stagnate',  check: (p: number) => p > -0.2 && p < 0.2 },
   { label: '📉 Small Dump', value: 'smalldump', check: (p: number) => p <= -0.5 && p >= -1.5 },
   { label: '💀 Big Dump',   value: 'bigdump',   check: (p: number) => p < -1.5 },
 ]

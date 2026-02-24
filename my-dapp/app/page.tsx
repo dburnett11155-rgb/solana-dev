@@ -17,7 +17,7 @@ const ADMIN_EMAIL = "Dburnett11155@gmail.com";
 const TIERS = [
   { label: "🚀 Big Pump", value: "bigpump", desc: "> +1.5%", border: "border-green-500", text: "text-green-400", bg: "bg-green-900/30", check: (p: number) => p > 1.5 },
   { label: "📈 Small Pump", value: "smallpump", desc: "+0.5% to +1.5%", border: "border-emerald-500", text: "text-emerald-400", bg: "bg-emerald-900/30", check: (p: number) => p >= 0.5 && p <= 1.5 },
-  { label: "😴 Stagnate", value: "stagnate", desc: "-0.5% to +0.5%", border: "border-yellow-500", text: "text-yellow-400", bg: "bg-yellow-900/30", check: (p: number) => p > -0.5 && p < 0.5 },
+  { label: "😴 Stagnate", value: "stagnate", desc: "-0.2% to +0.2%", border: "border-yellow-500", text: "text-yellow-400", bg: "bg-yellow-900/30", check: (p: number) => p > -0.2 && p < 0.2 },
   { label: "📉 Small Dump", value: "smalldump", desc: "-1.5% to -0.5%", border: "border-orange-500", text: "text-orange-400", bg: "bg-orange-900/30", check: (p: number) => p <= -0.5 && p >= -1.5 },
   { label: "💀 Big Dump", value: "bigdump", desc: "< -1.5%", border: "border-red-500", text: "text-red-400", bg: "bg-red-900/30", check: (p: number) => p < -1.5 },
 ];

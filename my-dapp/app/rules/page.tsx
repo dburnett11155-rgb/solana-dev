@@ -40,7 +40,7 @@ export default function RulesPage() {
             </div>
             <div className="flex justify-between items-center bg-yellow-900/20 rounded-lg px-3 py-2">
               <span className="text-yellow-400 font-bold text-sm">😴 Stagnate</span>
-              <span className="text-gray-400 text-xs">-0.5% to +0.5%</span>
+              <span className="text-gray-400 text-xs">-0.2% to +0.2%</span>
             </div>
             <div className="flex justify-between items-center bg-orange-900/20 rounded-lg px-3 py-2">
               <span className="text-orange-400 font-bold text-sm">📉 Small Dump</span>
