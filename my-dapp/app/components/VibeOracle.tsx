@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+
+const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
+const ORACLE_FEE = 0.005;
 
 const TIERS = [
   { value: "bigpump", label: "🚀 Big Pump", color: "text-green-400" },
@@ -23,12 +28,33 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
   const [loading, setLoading] = useState(false);
   const [oracle, setOracle] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const { publicKey, sendTransaction, connected } = useWallet();
+  const { connection } = useConnection();
 
   async function consultOracle() {
+    if (!connected || !publicKey) {
+      setError('Connect your wallet to use the Oracle.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setOracle(null);
+
     try {
+      const lamports = Math.floor(ORACLE_FEE * LAMPORTS_PER_SOL);
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: RAKE_WALLET,
+          lamports,
+        })
+      );
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+      const sig = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(sig, 'confirmed');
+
       const res = await fetch('/api/vibe-oracle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,8 +66,8 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
       } else {
         setError('Oracle failed to respond. Try again.');
       }
-    } catch {
-      setError('Connection error. Try again.');
+    } catch (e: any) {
+      setError(e.message?.includes('rejected') ? 'Transaction cancelled.' : 'Error: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -55,15 +81,13 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
         style={{ background: "linear-gradient(135deg,#1a0020,#0d0018)" }}
       >
         <p className="text-pink-300 font-bold text-sm">🔮 VIBE ORACLE</p>
-        <p className="text-gray-500 text-xs mt-1">AI probability co-pilot — free to use</p>
+        <p className="text-gray-500 text-xs mt-1">AI probability co-pilot · small fee per use</p>
       </button>
     );
   }
 
   return (
     <div className="rounded-2xl border border-pink-800 mb-3 overflow-hidden" style={{ background: "linear-gradient(135deg,#1a0020,#0d0018)" }}>
-      
-      {/* Header */}
       <div className="flex justify-between items-center px-4 py-3 border-b border-pink-900">
         <div>
           <p className="text-pink-300 font-bold text-sm">🔮 VIBE ORACLE</p>
@@ -75,46 +99,44 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
       <div className="p-4">
         {!oracle && !loading && (
           <div className="text-center">
-            <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+            <p className="text-gray-400 text-xs mb-2 leading-relaxed">
               The Oracle reads live SOL price action, round timing, and current bets to give you an AI probability breakdown for each tier.
             </p>
+            <p className="text-pink-400 text-xs font-bold mb-4">A small fee applies per consultation.</p>
+            {!connected && (
+              <p className="text-yellow-500 text-xs mb-3">Connect your wallet to use the Oracle.</p>
+            )}
             <button
               onClick={consultOracle}
-              className="w-full py-3 rounded-xl font-black text-sm bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-500 hover:to-purple-500 transition-all"
+              disabled={!connected}
+              className={`w-full py-3 rounded-xl font-black text-sm transition-all ${
+                connected
+                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-500 hover:to-purple-500'
+                  : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+              }`}
             >
               🔮 Consult the Oracle
             </button>
+            {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
           </div>
         )}
 
         {loading && (
           <div className="text-center py-6">
-            <p className="text-pink-400 text-sm animate-pulse font-bold">🔮 Oracle is reading the vibes...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="text-center">
-            <p className="text-red-400 text-xs mb-3">{error}</p>
-            <button onClick={consultOracle} className="text-pink-400 text-xs underline">Try again</button>
+            <p className="text-pink-400 text-sm animate-pulse font-bold">🔮 Reading the vibes...</p>
           </div>
         )}
 
         {oracle && (
           <div className="space-y-3">
-            {/* Summary */}
             <div className="bg-pink-900/20 rounded-xl p-3">
               <p className="text-pink-300 text-xs leading-relaxed">{oracle.summary}</p>
             </div>
-
-            {/* Warning */}
             {oracle.warning && (
               <div className="bg-yellow-900/20 rounded-xl p-2">
                 <p className="text-yellow-400 text-xs">⚠️ {oracle.warning}</p>
               </div>
             )}
-
-            {/* Probabilities */}
             <div className="space-y-2">
               {TIERS.map(tier => {
                 const pct = oracle.probabilities?.[tier.value] || 0;
@@ -137,8 +159,6 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
                 );
               })}
             </div>
-
-            {/* Confidence */}
             <div className="flex justify-between items-center pt-1">
               <span className="text-gray-600 text-xs">Oracle confidence</span>
               <span className={`text-xs font-bold ${
@@ -148,9 +168,9 @@ export default function VibeOracle({ price, hourOpen, timeLeft, tierCounts, pot 
                 {oracle.confidence?.toUpperCase()}
               </span>
             </div>
-
             <button
               onClick={consultOracle}
+              disabled={!connected}
               className="w-full py-2 rounded-xl text-xs font-bold border border-pink-800 text-pink-400 hover:bg-pink-900/30 transition-all"
             >
               🔮 Refresh Oracle
