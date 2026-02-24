@@ -10,6 +10,7 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<any>(null);
   const seriesInstance = useRef<any>(null);
+  const priceLineRef = useRef<any>(null);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -37,9 +38,7 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
           vertLine: { color: "rgba(168,85,247,0.5)" },
           horzLine: { color: "rgba(168,85,247,0.5)" },
         },
-        rightPriceScale: {
-          borderColor: "rgba(139,92,246,0.3)",
-        },
+        rightPriceScale: { borderColor: "rgba(139,92,246,0.3)" },
         timeScale: {
           borderColor: "rgba(139,92,246,0.3)",
           timeVisible: true,
@@ -47,7 +46,6 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
         },
       });
 
-      // v4+ API
       let series: any;
       if (typeof (chart as any).addAreaSeries === "function") {
         series = (chart as any).addAreaSeries({
@@ -73,25 +71,11 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
         const data = await res.json();
         const candles = data.result.SOLUSD || data.result[Object.keys(data.result)[0]];
         const last120 = candles.slice(-120);
-
         const lineData = last120.map((c: any[]) => ({
           time: c[0] as number,
           value: parseFloat(c[4]),
         }));
-
         series.setData(lineData);
-
-        if (roundStartPrice) {
-          series.createPriceLine({
-            price: roundStartPrice,
-            color: "#facc15",
-            lineWidth: 1,
-            lineStyle: 2,
-            axisLabelVisible: true,
-            title: "Round open",
-          });
-        }
-
         chart.timeScale().fitContent();
       } catch (e) {
         console.error("Chart fetch failed", e);
@@ -118,6 +102,22 @@ export default function SolChart({ roundStartPrice }: SolChartProps) {
       chartInstance.current?.remove();
       chartInstance.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    if (!seriesInstance.current || !roundStartPrice) return;
+    if (priceLineRef.current) {
+      try { seriesInstance.current.removePriceLine(priceLineRef.current); } catch {}
+      priceLineRef.current = null;
+    }
+    priceLineRef.current = seriesInstance.current.createPriceLine({
+      price: roundStartPrice,
+      color: "#facc15",
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: "Round open",
+    });
   }, [roundStartPrice]);
 
   return (
