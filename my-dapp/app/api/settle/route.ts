@@ -17,7 +17,8 @@ const TIERS = [
 ]
 
 const JACKPOT_STREAK = 8
-const JACKPOT_SEED = 2.0
+const JACKPOT_SEED = 20.0
+const JACKPOT_RESET = 2.0
 
 function getMultiplier(minutesIntoRound: number): number {
   if (minutesIntoRound < 15) return 1.8
@@ -62,65 +63,48 @@ export async function POST(req: NextRequest) {
     const currentHour = now.getHours()
     const currentDate = now.toISOString().slice(0, 10)
 
-    const { data: allRounds } = await supabase
+    // Close ALL stale open rounds that are not the current hour
+    const { data: staleRounds } = await supabase
       .from('rounds')
       .select('*')
       .eq('settled', false)
-      .order('created_at', { ascending: true })
-
-    if (!allRounds || allRounds.length === 0) {
-      return NextResponse.json({ ok: true, message: 'No unsettled rounds found' })
-    }
-
-    const rounds = allRounds.filter(r => {
-      if (r.date === currentDate && r.hour === currentHour) return false
-      return true
-    })
-
-    if (rounds.length === 0) {
-      return NextResponse.json({ ok: true, message: 'Only current round is open — nothing to settle' })
-    }
 
     const results = []
 
-    for (const round of rounds) {
+    for (const round of (staleRounds || [])) {
+      // Skip current round
+      if (round.date === currentDate && round.hour === currentHour) continue
+
       if (!round.start_price || round.start_price === 0) {
-        await supabase.from('rounds').update({
-          settled: true,
-          end_price: currentPrice,
-          is_rollover: true
-        }).eq('id', round.id)
+        await supabase.from('rounds').update({ settled: true, end_price: currentPrice }).eq('id', round.id)
         results.push({ roundId: round.id, skipped: true, reason: 'no start price' })
         continue
       }
 
       const pctChange = ((currentPrice - round.start_price) / round.start_price) * 100
       const winningTier = TIERS.find(t => t.check(pctChange))
-      if (!winningTier) continue
+      if (!winningTier) {
+        await supabase.from('rounds').update({ settled: true, end_price: currentPrice }).eq('id', round.id)
+        continue
+      }
 
-      const { data: bets } = await supabase
-        .from('bets').select('*').eq('round_id', round.id)
-
+      const { data: bets } = await supabase.from('bets').select('*').eq('round_id', round.id)
       const allBets = bets || []
       const winningBets = allBets.filter((b: any) => b.tier === winningTier.value)
       const payoutPool = (round.pot || 0) * 0.89
       const isRollover = winningBets.length === 0
 
-      // Round start time
       const roundStartTime = new Date(`${round.date}T${String(round.hour).padStart(2,'0')}:00:00`)
       const thirtyMinMark = roundStartTime.getTime() + 30 * 60 * 1000
 
-      // Time-weighted payouts
       const weightedBets = winningBets.map((b: any) => {
         const betTime = new Date(b.created_at)
         const minutesIntoRound = Math.max(0, (betTime.getTime() - roundStartTime.getTime()) / 60000)
         const multiplier = getMultiplier(minutesIntoRound)
-        const effectiveAmount = b.amount * multiplier
-        return { ...b, effectiveAmount, multiplier, minutesIntoRound: minutesIntoRound.toFixed(1) }
+        return { ...b, effectiveAmount: b.amount * multiplier, multiplier, minutesIntoRound: minutesIntoRound.toFixed(1) }
       })
 
       const totalEffective = weightedBets.reduce((sum: number, b: any) => sum + b.effectiveAmount, 0)
-
       const payouts = weightedBets.map((b: any) => ({
         wallet: b.wallet,
         amount: parseFloat(((b.effectiveAmount / totalEffective) * payoutPool).toFixed(6)),
@@ -135,26 +119,18 @@ export async function POST(req: NextRequest) {
         is_rollover: isRollover
       }).eq('id', round.id)
 
-      // Update streaks — only early bets (placed before 30 min mark) count toward jackpot streak
+      // Update streaks
       for (const bet of allBets) {
         const won = bet.tier === winningTier.value
         const betTime = new Date(bet.created_at).getTime()
         const isEarlyBet = betTime < thirtyMinMark
 
-        const { data: existing } = await supabase
-          .from('streaks').select('*').eq('wallet', bet.wallet).single()
-
-        // Streak only progresses for early bets
+        const { data: existing } = await supabase.from('streaks').select('*').eq('wallet', bet.wallet).single()
         let newStreak = existing?.current_streak || 0
-        if (won && isEarlyBet) {
-          newStreak = newStreak + 1
-        } else if (!won) {
-          newStreak = 0
-        }
-        // Late bet that won: streak stays the same (no reset, no increment)
+        if (won && isEarlyBet) newStreak += 1
+        else if (!won) newStreak = 0
 
         const jackpotHit = newStreak >= JACKPOT_STREAK
-        const currentJackpot = round.jackpot || JACKPOT_SEED
 
         if (existing) {
           await supabase.from('streaks').update({
@@ -171,25 +147,28 @@ export async function POST(req: NextRequest) {
         }
 
         if (jackpotHit) {
-          await sendEmail('Dburnett11155@gmail.com', '🏆 JACKPOT HIT! 4-WIN STREAK!',
-            `JACKPOT WINNER!\nWallet: ${bet.wallet}\nJackpot: ${currentJackpot} SOL\n\nSend jackpot to this wallet immediately!\n\nNote: This was a verified early-bet 4-win streak.`)
+          await sendEmail('Dburnett11155@gmail.com', '🏆 JACKPOT HIT! 8-WIN STREAK!',
+            `JACKPOT WINNER!\nWallet: ${bet.wallet}\nJackpot: ${round.jackpot} SOL\n\nSend jackpot immediately!`)
+          // Reset jackpot to 2 SOL after win
+          await supabase.from('rounds').update({ jackpot: JACKPOT_RESET }).eq('id', round.id)
         }
       }
 
       const payoutText = payouts.length > 0
-        ? payouts.map((p: any) => `${p.wallet}: ${p.amount} SOL (${p.multiplier}x, bet at ${p.minutesIntoRound}min)`).join('\n')
+        ? payouts.map((p: any) => `${p.wallet}: ${p.amount} SOL (${p.multiplier}x, ${p.minutesIntoRound}min)`).join('\n')
         : 'No winners — pot rolled over'
 
       if (allBets.length > 0) {
         await sendEmail('Dburnett11155@gmail.com',
           `Degen Echo Round ${round.id} Settled`,
-          `Round ${round.id}\nDate: ${round.date} Hour: ${round.hour}\nWinner: ${winningTier.label}\nSOL moved: ${pctChange.toFixed(3)}%\nPot: ${round.pot} SOL\n\nPAYOUTS (time-weighted):\n${payoutText}`
+          `Round ${round.id}\nDate: ${round.date} Hour: ${round.hour}\nWinner: ${winningTier.label}\nSOL moved: ${pctChange.toFixed(3)}%\nPot: ${round.pot} SOL\n\nPAYOUTS:\n${payoutText}`
         )
       }
 
       results.push({ roundId: round.id, winningTier: winningTier.label, pctChange: pctChange.toFixed(3), payouts, isRollover })
     }
 
+    // Ensure current round exists — only create if it doesn't
     const { data: existingRound } = await supabase
       .from('rounds')
       .select('id')
@@ -203,7 +182,7 @@ export async function POST(req: NextRequest) {
         date: currentDate,
         start_price: currentPrice,
         pot: 0,
-        jackpot: 20.0,
+        jackpot: JACKPOT_SEED,
         is_rollover: false,
         rollover_amount: 0,
         settled: false
