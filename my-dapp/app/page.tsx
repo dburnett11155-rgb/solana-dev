@@ -522,7 +522,7 @@ export default function Home() {
         </div>
 
         {/* Rollover */}
-        {isRollover && (
+        {isRollover && rolloverAmount > 0 && (
           <div className="bg-gradient-to-r from-yellow-900/60 to-orange-900/60 border border-yellow-500 rounded-2xl p-4 mb-3 text-center">
             <p className="text-yellow-300 font-black text-xl">🔥 ROLLOVER ROUND!</p>
             <p className="text-white font-black text-2xl">{rolloverAmount.toFixed(2)} SOL ROLLED OVER</p>
