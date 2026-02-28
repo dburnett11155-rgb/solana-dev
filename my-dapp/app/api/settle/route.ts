@@ -60,7 +60,7 @@ function getProgram(connection: Connection) {
   
   const wallet = new NodeWallet(keypair)
   const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' })
-  return new Program(IDL as any, new PublicKey(PROGRAM_ID), provider)
+  return new Program(IDL as any, provider)
 }
 
 export async function POST(req: NextRequest) {
