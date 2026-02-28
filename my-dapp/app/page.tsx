@@ -34,7 +34,7 @@ function getTodayStr() {
   return new Date().toISOString().slice(0,10);
 }
 function getCurrentHour() {
-  return new Date().getHours();
+  return new Date().getUTCHours();
 }
 
 export default function Home() {
