@@ -83,7 +83,7 @@ export default function Home() {
     if (data) {
       setRoundId(data.id);
       setPot(data.pot || 0);
-      setJackpot(data.jackpot && data.jackpot > 0.1 ? data.jackpot : 20.0);
+      setJackpot(data.jackpot || 0);
       setIsRollover(data.is_rollover || false);
       setRolloverAmount(data.rollover_amount || 0);
       if (data.start_price) setRoundStartPrice(data.start_price);
@@ -226,7 +226,7 @@ export default function Home() {
       date: getTodayStr(),
       start_price: price,
       pot: newPot,
-      jackpot: jackpot < 20.0 ? 20.0 : jackpot,
+      jackpot: jackpot,
       is_rollover: isRolloverRound,
       rollover_amount: newRolloverAmount
     }).select().single();
