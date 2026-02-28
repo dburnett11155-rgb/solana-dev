@@ -120,7 +120,7 @@ export default function Home() {
     }
   }, [price, publicKey]);
 
-  useEffect(() => { loadRound(); }, []);
+  useEffect(() => { loadRound(); }, [roundId]);
 
   // Settle round at top of hour
   const settleRound = useCallback(async () => {
