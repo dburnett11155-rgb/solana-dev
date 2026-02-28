@@ -49,7 +49,7 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(3600);
   const [pot, setPot] = useState(0);
-  const [jackpot, setJackpot] = useState(20.0);
+  const [jackpot, setJackpot] = useState(0);
   const [isRollover, setIsRollover] = useState(false);
   const [rolloverAmount, setRolloverAmount] = useState(0);
   const [betPlaced, setBetPlaced] = useState(false);
@@ -260,7 +260,7 @@ export default function Home() {
       } else if (data.id !== roundId) {
         setRoundId(data.id);
         setPot(data.pot || 0);
-        setJackpot(data.jackpot || 20.0);
+        setJackpot(data.jackpot || 0);
         setIsRollover(data.is_rollover || false);
         setRolloverAmount(data.rollover_amount || 0);
         if (data.start_price) setRoundStartPrice(data.start_price);
