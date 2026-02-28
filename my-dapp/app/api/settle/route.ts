@@ -77,7 +77,8 @@ export async function POST(req: NextRequest) {
     const currentDate = now.toISOString().slice(0, 10)
 
     const connection = getConnection()
-    const program = getProgram(connection)
+    const keypair = getKeypair()
+    const program = getProgram(connection, keypair)
 
     // Get unsettled rounds from Supabase
     const { data: staleRounds } = await supabase
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
           .settleRound(endPriceLamports)
           .accounts({
             round: roundPDA,
-            authority: program.provider.publicKey
+            authority: keypair.publicKey
           })
           .rpc()
 
