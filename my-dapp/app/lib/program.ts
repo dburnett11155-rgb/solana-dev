@@ -1,5 +1,5 @@
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
-import { PublicKey, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { IDL, PROGRAM_ID } from "./degen-echo-idl";
 
 export const RAKE_WALLET = new PublicKey("9pWyRYfKahQZPTnNMcXhZDDsUV75mHcb2ZpxGqzZsHnK");
@@ -14,7 +14,7 @@ const TIER_MAP: Record<string, number> = {
 };
 
 export function getProgram(provider: AnchorProvider) {
-  return new Program(IDL as any, new PublicKey(PROGRAM_ID), provider);
+  return new Program(IDL as any, provider);
 }
 
 export function getRoundPDA(hour: number, date: string) {
@@ -55,58 +55,4 @@ export function tierToNumber(tier: string): number {
 
 export function numberToTier(n: number): string {
   return Object.keys(TIER_MAP).find(k => TIER_MAP[k] === n) || "";
-}
-
-export async function placeBetOnChain(
-  program: Program,
-  userPubkey: PublicKey,
-  tier: string,
-  amountSol: number,
-  hour: number,
-  date: string
-) {
-  const roundPDA = getRoundPDA(hour, date);
-  const vaultPDA = getRoundVaultPDA(roundPDA);
-  const betPDA = getBetPDA(roundPDA, userPubkey);
-  const amountLamports = new BN(Math.floor(amountSol * LAMPORTS_PER_SOL));
-
-  const tx = await program.methods
-    .placeBet(tierToNumber(tier), amountLamports)
-    .accounts({
-      round: roundPDA,
-      bet: betPDA,
-      user: userPubkey,
-      roundVault: vaultPDA,
-      rakeWallet: RAKE_WALLET,
-      systemProgram: web3.SystemProgram.programId
-    })
-    .rpc();
-
-  return tx;
-}
-
-export async function claimWinningsOnChain(
-  program: Program,
-  userPubkey: PublicKey,
-  hour: number,
-  date: string
-) {
-  const roundPDA = getRoundPDA(hour, date);
-  const vaultPDA = getRoundVaultPDA(roundPDA);
-  const betPDA = getBetPDA(roundPDA, userPubkey);
-  const streakPDA = getStreakPDA(userPubkey);
-
-  const tx = await program.methods
-    .claimWinnings()
-    .accounts({
-      round: roundPDA,
-      bet: betPDA,
-      user: userPubkey,
-      roundVault: vaultPDA,
-      streak: streakPDA,
-      systemProgram: web3.SystemProgram.programId
-    })
-    .rpc();
-
-  return tx;
 }
