@@ -1,6 +1,7 @@
 export const PROGRAM_ID = "2RUvH2vVqDtMPXPaGV58C2F2mT1SpDq47teyoJABhDgK";
 
 export const IDL = {
+  address: "2RUvH2vVqDtMPXPaGV58C2F2mT1SpDq47teyoJABhDgK",
   version: "0.1.0",
   name: "degen_echo",
   instructions: [
