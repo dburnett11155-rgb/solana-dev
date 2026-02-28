@@ -494,9 +494,6 @@ export default function Home() {
           </div>
         </div>
 
-        }
-        </div>
-
         {/* Rollover */}
         {isRollover && rolloverAmount > 0 && (
           <div className="bg-gradient-to-r from-yellow-900/60 to-orange-900/60 border border-yellow-500 rounded-2xl p-4 mb-3 text-center">
