@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("11111111111111111111111111111111");
+declare_id!("2RUvH2vVqDtMPXPaGV58C2F2mT1SpDq47teyoJABhDgK");
 
 #[program]
 pub mod degen_echo {
