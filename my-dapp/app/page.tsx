@@ -494,20 +494,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Jackpot */}
-        <div className="rounded-2xl p-4 mb-3 border border-yellow-800 text-center" style={{background:"linear-gradient(135deg,#1a1000,#201500)"}}>
-          <p className="text-yellow-300 font-black text-base">⚡ JACKPOT</p>
-          <p className="text-yellow-400 font-black text-4xl my-1">{jackpot.toFixed(3)} SOL</p>
-          <p className="text-yellow-600 text-xs mb-1">Grows with every bet. Never resets. Never been won.</p>
-          <p className="text-yellow-500 text-xs font-bold">🔥 Hit an 8 win streak — claim it all</p>
-          {streak > 0 && (
-            <div className="mt-3 bg-yellow-900/40 rounded-xl p-2">
-              <p className="text-yellow-300 font-black text-sm">Your streak: {streak} / {JACKPOT_STREAK} 🔥</p>
-              <div className="w-full bg-yellow-900/30 rounded-full h-2 mt-1">
-                <div className="bg-yellow-400 h-2 rounded-full transition-all" style={{width:`${(streak/JACKPOT_STREAK)*100}%`}} />
-              </div>
-            </div>
-          )}
+        }
         </div>
 
         {/* Rollover */}
