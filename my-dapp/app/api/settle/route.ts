@@ -4,7 +4,8 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Connection, Keypair, PublicKey } from '@solana/web3.js'
-import { AnchorProvider, Program, Wallet, BN } from '@coral-xyz/anchor'
+import { AnchorProvider, Program, BN } from '@coral-xyz/anchor'
+import NodeWallet from '@coral-xyz/anchor/dist/cjs/nodewallet'
 import { IDL, PROGRAM_ID } from '../../lib/degen-echo-idl'
 import { getRoundPDA, getRoundVaultPDA, numberToTier } from '../../lib/program'
 import fs from 'fs'
@@ -57,7 +58,7 @@ function getProgram(connection: Connection) {
   const keypairData = JSON.parse(process.env.AUTHORITY_KEYPAIR || '[]')
   const keypair = Keypair.fromSecretKey(Uint8Array.from(keypairData))
   
-  const wallet = new Wallet(keypair)
+  const wallet = new NodeWallet(keypair)
   const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' })
   return new Program(IDL as any, new PublicKey(PROGRAM_ID), provider)
 }
