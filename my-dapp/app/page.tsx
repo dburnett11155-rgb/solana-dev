@@ -518,13 +518,6 @@ export default function Home() {
         )}
 
         {/* Early adopter banner */}
-        {totalBets < 200 && (
-          <div className="rounded-2xl p-3 mb-3 border border-purple-500 text-center" style={{background:"linear-gradient(135deg,#1a0030,#0d0025)"}}>
-            <p className="text-purple-300 font-black text-sm">🎁 EARLY ADOPTER BONUS</p>
-            <p className="text-purple-400 text-xs">First 200 bets get 30% rake discount · {200 - totalBets} spots left</p>
-          </div>
-        )}
-
         {/* Rollover */}
         {isRollover && rolloverAmount > 0 && (
           <div className="bg-gradient-to-r from-yellow-900/60 to-orange-900/60 border border-yellow-500 rounded-2xl p-4 mb-3 text-center">
