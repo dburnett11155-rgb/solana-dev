@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   try {
     const currentPrice = await getSolPrice()
     const now = new Date()
-    const currentHour = now.getHours()
+    const currentHour = now.getUTCHours()
     const currentDate = now.toISOString().slice(0, 10)
 
     // Set up Anchor
