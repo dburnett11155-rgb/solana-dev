@@ -7,7 +7,8 @@ import { Connection, Keypair, PublicKey } from '@solana/web3.js'
 import { AnchorProvider, Program, BN } from '@coral-xyz/anchor'
 import NodeWallet from '@coral-xyz/anchor/dist/cjs/nodewallet'
 import { IDL, PROGRAM_ID } from '../../lib/degen-echo-idl'
-import { getRoundPDA } from '../../lib/program'
+import { getRoundPDA, getRoundVaultPDA } from '../../lib/program'
+import { web3 } from '@coral-xyz/anchor'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
