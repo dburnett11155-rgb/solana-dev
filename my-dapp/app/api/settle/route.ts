@@ -140,14 +140,20 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!existingRound) {
+      // Calculate rollover from previous rounds
+      const totalRollover = (staleRounds || []).reduce((sum: number, r: any) => {
+        if (r.is_rollover) return sum + (r.pot || 0)
+        return sum
+      }, 0)
+      
       await supabase.from('rounds').insert({
         hour: currentHour,
         date: currentDate,
         start_price: currentPrice,
-        pot: 0,
+        pot: totalRollover,
         jackpot: 0,
-        is_rollover: false,
-        rollover_amount: 0,
+        is_rollover: totalRollover > 0,
+        rollover_amount: totalRollover,
         settled: false
       })
     }
