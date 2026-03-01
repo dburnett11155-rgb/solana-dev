@@ -5,6 +5,9 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { supabase } from "./lib/supabase";
+import { AnchorProvider, Program } from "@coral-xyz/anchor";
+import { IDL } from "./lib/degen-echo-idl";
+import { getRoundPDA, getRoundVaultPDA, getBetPDA, getStreakPDA, tierToNumber } from "./lib/program";
 import SolChart from "./components/SolChart";
 import EchoArena from "./components/EchoArena";
 import VibeOracle from "./components/VibeOracle";
@@ -400,19 +403,32 @@ export default function Home() {
     setSending(true);
     try {
       const a = parseFloat(amount);
-      const lamports = Math.floor(a*LAMPORTS_PER_SOL);
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: RAKE_WALLET,
-          lamports,
+
+      // Use smart contract for bet
+      const provider = new AnchorProvider(connection, { publicKey, signTransaction: async (tx: any) => { const signed = await sendTransaction(tx, connection); return tx; }, signAllTransactions: async (txs: any) => txs } as any, { commitment: 'confirmed' });
+      const program = new Program(IDL as any, provider);
+      const hour = new Date().getUTCHours();
+      const date = new Date().toISOString().slice(0,10);
+      const roundPDA = getRoundPDA(hour, date);
+      const vaultPDA = getRoundVaultPDA(roundPDA);
+      const betPDA = getBetPDA(roundPDA, publicKey);
+      const streakPDA = getStreakPDA(publicKey);
+      const tierNum = tierToNumber(choice);
+      const amountBN = Math.floor(a * LAMPORTS_PER_SOL);
+
+      const sig = await program.methods
+        .placeBet(tierNum, amountBN)
+        .accounts({
+          round: roundPDA,
+          bet: betPDA,
+          user: publicKey,
+          roundVault: vaultPDA,
+          rakeWallet: RAKE_WALLET,
+          systemProgram: PublicKey.default
         })
-      );
-      const {blockhash} = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-      const sig = await sendTransaction(transaction, connection);
-      await connection.confirmTransaction(sig,"confirmed");
+        .rpc();
+
+      await connection.confirmTransaction(sig, 'confirmed');
       setTxSig(sig);
 
       // Record bet in Supabase
