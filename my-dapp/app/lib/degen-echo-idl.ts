@@ -122,6 +122,7 @@ export const IDL = {
       }
     }
   ],
+  types: [],
   errors: [
     { code: 6000, name: "InvalidTier", msg: "Tier must be 1-5" },
     { code: 6001, name: "InvalidAmount", msg: "Bet amount must be greater than 0" },
