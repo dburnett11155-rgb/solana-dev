@@ -66,7 +66,17 @@ export default function Home() {
   const [lastResult, setLastResult] = useState<{winningTier:string,pctChange:number}|null>(null);
   const [liveChange, setLiveChange] = useState<number|null>(null);
   const [krakenHourOpen, setKrakenHourOpen] = useState<number|null>(null);
+  const [totalBets, setTotalBets] = useState(0);
   const chartRef = useRef<HTMLDivElement>(null);
+
+  // Load total bet count for early adopter discount
+  useEffect(() => {
+    async function loadBetCount() {
+      const { count } = await supabase.from('bets').select('*', { count: 'exact', head: true });
+      setTotalBets(count || 0);
+    }
+    loadBetCount();
+  }, []);
 
   // Load or create current round from Supabase
   const loadRound = useCallback(async () => {
@@ -406,8 +416,13 @@ export default function Home() {
       setTxSig(sig);
 
       // Record bet in Supabase
+      // Check if early adopter discount applies (first 200 bets)
+      const { count: betCount } = await supabase.from('bets').select('*', { count: 'exact', head: true });
+      const isEarlyAdopter = (betCount || 0) < 200;
+      const rakePct = isEarlyAdopter ? 0.07 : 0.10;
+      const potPct = isEarlyAdopter ? 0.92 : 0.89;
       const jackpotCut = a*0.01;
-      const potCut = a*0.89;
+      const potCut = a*potPct;
       const newPot = parseFloat((pot+potCut).toFixed(4));
       const newJackpot = parseFloat((jackpot+jackpotCut).toFixed(4));
 
@@ -493,6 +508,22 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Early adopter banner */}
+        {totalBets < 200 && (
+          <div className="rounded-2xl p-3 mb-3 border border-purple-500 text-center" style={{background:"linear-gradient(135deg,#1a0030,#0d0025)"}}>
+            <p className="text-purple-300 font-black text-sm">🎁 EARLY ADOPTER BONUS</p>
+            <p className="text-purple-400 text-xs">First 200 bets get 30% rake discount · {200 - totalBets} spots left</p>
+          </div>
+        )}
+
+        {/* Early adopter banner */}
+        {totalBets < 200 && (
+          <div className="rounded-2xl p-3 mb-3 border border-purple-500 text-center" style={{background:"linear-gradient(135deg,#1a0030,#0d0025)"}}>
+            <p className="text-purple-300 font-black text-sm">🎁 EARLY ADOPTER BONUS</p>
+            <p className="text-purple-400 text-xs">First 200 bets get 30% rake discount · {200 - totalBets} spots left</p>
+          </div>
+        )}
 
         {/* Rollover */}
         {isRollover && rolloverAmount > 0 && (
