@@ -460,7 +460,7 @@ export default function Home() {
   const priceDown = prevPrice&&price&&price<prevPrice;
   const priceColor = priceUp?"text-green-400":priceDown?"text-red-400":"text-purple-300";
   const totalPot = pot + rolloverAmount;
-  const liveTier = liveChange!==null ? TIERS.find(t=>t.check(liveChange!)) : null;
+  const liveTier = liveChange!==null && krakenHourOpen!==null ? TIERS.find(t=>t.check(liveChange!)) : null;
 
   return (
     <main className="min-h-screen text-white p-3" style={{background:"linear-gradient(135deg,#0a0010 0%,#0d0020 50%,#050010 100%)"}}>
